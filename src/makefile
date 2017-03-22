@@ -1,0 +1,39 @@
+#
+# Disable CCACHE
+CCACHE_DISABLE=1
+#
+CPSW_DIR=/afs/slac/g/lcls/package/cpsw/framework/R3.5.3/src
+
+# may override CPSW_DIR / DEVICELIB_DIR from release.mak
+# must set SRCDIR (is redefined by recursive make)
+SRCDIR= .
+-include $(SRCDIR)/release.mak
+
+include $(CPSW_DIR)/defs.mak
+INSTALL_DIR=../
+
+#HEADERS = RamControl.hh TPGMini.hh TPG.hh AmcCarrier.hh
+CXXFLAGS = -g -DFRAMEWORK_R3_4
+HEADERS = BsaField.hh Processor.hh BsaDefs.hh AmcCarrierBase.hh AmcCarrier.hh AmcCarrierYaml.hh
+bsa_SRCS += RamControl.cc TPGMini.cc TPG.cc AmcCarrierBase.cc AmcCarrier.cc AmcCarrierYaml.cc BsaDefs.cc
+bsa_SRCS += Processor.cc
+
+STATIC_LIBRARIES+=bsa
+
+bsa_tst_SRCS = bsa_tst.cc
+bsa_tst_LIBS = bsa $(CPSW_LIBS)
+PROGRAMS    += bsa_tst
+
+bsaapp_tst_SRCS = bsaapp_tst.cc
+bsaapp_tst_LIBS = bsa $(CPSW_LIBS)
+PROGRAMS    += bsaapp_tst
+
+bsayaml_tst_SRCS = bsayaml_tst.cc
+bsayaml_tst_LIBS = bsa $(CPSW_LIBS)
+#PROGRAMS    += bsayaml_tst
+
+cpsw_duo_SRCS = cpsw_duo.cc
+cpsw_duo_LIBS = bsa $(CPSW_LIBS)
+PROGRAMS    += cpsw_duo
+
+include $(CPSW_DIR)/rules.mak
