@@ -236,7 +236,7 @@ void AmcCarrierBase::_fill(void*    dst,
 }
 
 #define PR36(name) {                                                    \
-    unsigned v;                                                         \
+    uint64_t v;                                                         \
     ScalVal_RO s = IScalVal_RO::create( path->findByName(#name));        \
     s->getVal(&v,1,&rng);                                               \
     printf("%09llx ",(unsigned long long)(v));                          \
