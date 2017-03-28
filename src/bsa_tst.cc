@@ -80,7 +80,7 @@ static void show_usage(const char* p)
   printf("Usage: %s [options]\n",p);
   printf("Options: -a <IP address dotted notation> : set carrier IP\n");
   printf("         -i <ndiag>                      : initialize BSA and diagnostics DRAM\n");
-  printf("         -g <rate>,<nacq>,<nacc>,<buffer>: acquire <nacq> events at <rate> into <buffer>\n");
+  printf("         -g <rate>,<nacq>,<nacc>,<buffer>(,<sevr>): acquire <nacq> events at <rate> into <buffer> when alarm <= <sevr>\n");
   printf("                                           rate=0 (1MHz), rate=1 (71kHz), rate=2 (10kHz),\n"
          "                                           rate=3 (1kHz), rate=4 (100Hz), rate=5 (10Hz),\n"
          "                                           rate=6 (1Hz)\n"
@@ -101,6 +101,7 @@ int main(int argc, char* argv[])
   int      rate=0;
   unsigned nacq=0;
   unsigned naccum=1;
+  unsigned sevr=3;
   uint64_t begin=0,end=0;
   unsigned ndiag=0;
   unsigned channelMask = 0xffffffff;
@@ -134,8 +135,11 @@ int main(int argc, char* argv[])
       nacq  = strtoul(endPtr+1,&endPtr,0);
       if (*endPtr==',') {
         naccum  = strtoul(endPtr+1,&endPtr,0);
-        if (*endPtr==',')
+        if (*endPtr==',') {
           array = strtoul(endPtr+1,&endPtr,0);
+          if (*endPtr==',')
+            sevr = strtoul(endPtr+1,&endPtr,0);
+        }
       }
       printf("Acquire %d records of %d sums at %d rate into array %d\n",
              nacq,naccum,rate,array);
@@ -206,7 +210,7 @@ int main(int argc, char* argv[])
 
       printf("RateSelect [%08x]\n",unsigned(rsel));
 
-      hw.start(array,beam,rsel,nacq,naccum,0);
+      hw.start(array,beam,rsel,nacq,naccum,sevr);
       hw.poll(cb);
     }
 
