@@ -2,7 +2,7 @@
 # Disable CCACHE
 CCACHE_DISABLE=1
 #
-CPSW_DIR=/afs/slac/g/lcls/package/cpsw/framework/R3.5.3/src
+CPSW_DIR=/afs/slac/g/lcls/package/cpsw/framework/R3.5.4/src
 
 # may override CPSW_DIR / DEVICELIB_DIR from release.mak
 # must set SRCDIR (is redefined by recursive make)
