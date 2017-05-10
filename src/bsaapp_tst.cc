@@ -67,7 +67,7 @@ public:
          double   r) :
     n(k), mean(m), rms2(r) {}
 public:
-  unsigned n;
+  uint64_t n;
   double   mean;
   double   rms2;
 };
@@ -112,7 +112,7 @@ public:
 
     unsigned nerr=0;
 
-    printf("-- Array[%02u]:%20.20s [%u.%09u] [%u] [%016llx,%llu]--\n", 
+    printf("-- Array[%02u]:%20.20s [%u.%09u] [%u] [%016llx,%llu]--\n",
            _a, _f.c_str(), _ts_sec, _ts_nsec, pid.size(), pid0, dpid);
 
     for(unsigned i=2; i<pid.size(); i++) {
@@ -125,13 +125,15 @@ public:
       //      pidl = next;
       pidl = pid[i];
     }
-    return;
+    //    return;
 
     {
       unsigned n = _v.size() < 50 ? _v.size() : 50;
       unsigned n0 = _v.size() - n;
-      for(unsigned i=n0; i<_v.size(); i++)
-        printf("[%u] %f:%f:%f [%016llx]\n", i, _v[i].n, _v[i].mean, _v[i].rms2);
+      for(unsigned i=n0; i<_v.size(); i++) {
+        const PVData& v = _v[i];
+        printf("[%u] %lu:%f:%f\n", i, v.n, v.mean, v.rms2);
+      }
     }
   }
 private:

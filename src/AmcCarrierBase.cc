@@ -183,10 +183,17 @@ Record*  AmcCarrierBase::get       (unsigned array,
     if (begin < start)
       begin = start;
     _wrAddr->getVal(&end,1,&rng);
+
+    uint64_t last;
+    _endAddr->getVal(&last,1,&rng);
+    if (end > last)
+      end = last;
+
+    if (begin > last)
+      begin = last;
+
     _sFull->getVal(&wrap     ,1,&rng);
     if (end <= begin && wrap) {
-      uint64_t last;
-      _endAddr->getVal(&last,1,&rng);
       unsigned tail_entries = (last-begin)/sizeof(Entry);
       unsigned head_entries = (end -start)/sizeof(Entry);
       end = start + head_entries*sizeof(Entry);
@@ -200,12 +207,13 @@ Record*  AmcCarrierBase::get       (unsigned array,
     }
     else {
       unsigned entries = (end -begin)/sizeof(Entry);
-      end = begin+entries*sizeof(Entry);
-      if (entries > 20000) abort();
-      record.entries.resize(entries);
-      _fill( record.entries.data(),
-             begin,
-             end );
+      if (entries) {
+        end = begin+entries*sizeof(Entry);
+        record.entries.resize(entries);
+        _fill( record.entries.data(),
+               begin,
+               end );
+      }
     }
   }
 
