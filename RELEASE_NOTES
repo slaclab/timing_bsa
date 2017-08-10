@@ -1,3 +1,6 @@
+R1.0.2       08/10/2017   Kukhee Kim (KHKIM)
+             Static build for test applications
+
 R1.0.1       05/09/2017   Matt Weaver (weaver)
              Enforce restrictions on BSA memory fetch locations
              Build against cpsw R3.5.4
