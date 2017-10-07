@@ -210,6 +210,7 @@ AmcCarrier::AmcCarrier(const char* ip, bool lTPG)
   _memEnd    = 0;
   //  pthread_t      thread_id;
   //  pthread_create(&thread_id, 0, poll_irq, (void*)this);
+  printf("dram array is (%u,%llu)\n", _dram->getNelms(), _dram->getSizeBits());
 }
 
 //
@@ -236,6 +237,7 @@ AmcCarrier::AmcCarrier(Path path)
   _trAddr    = IScalVal_RO::create( _path->findByName("mmio/control/TriggerAddr") );
   _dram      = IScalVal_RO::create( _path->findByName("strm/dram") );
   _memEnd    = 0;
+  printf("dram array is (%u,%llu)\n", _dram->getNelms(), _dram->getSizeBits());
 }
 
 AmcCarrier::~AmcCarrier()

@@ -37,7 +37,7 @@ static uint64_t GET_U1(Path pre, unsigned nelms)
 using namespace Bsa;
 
 AmcCarrierYaml::AmcCarrierYaml(Path mmio,
-                               Path dram)
+                               Path dram) 
 {
   _path   = mmio;
   _dram   = IScalVal_RO::create( dram );
@@ -59,6 +59,8 @@ AmcCarrierYaml::AmcCarrierYaml(Path mmio,
   _wrAddr    = IScalVal_RO::create( _bpath->findByName("WrAddr") );
   _trAddr    = IScalVal_RO::create( _bpath->findByName("TriggerAddr") );
   _memEnd    = 0;
+
+  printf("dram array is (%u,%llu)\n", _dram->getNelms(), _dram->getSizeBits());
 }
 
 AmcCarrierYaml::~AmcCarrierYaml()
@@ -87,9 +89,9 @@ RingState AmcCarrierYaml::ring     (unsigned array) const
   return s;
 }
 
-void     AmcCarrierYaml::initialize(unsigned index,
-                                uint64_t bufferSize,
-                                bool     doneWhenFull)
+void     AmcCarrierYaml::initializ_(unsigned index,
+                                    uint64_t bufferSize,
+                                    bool     doneWhenFull)
 {
   const uint64_t BlockMask = (0x1ULL<<12)-1;  // Buffers must be in blocks of 4kB
 

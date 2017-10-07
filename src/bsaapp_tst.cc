@@ -189,6 +189,7 @@ static void show_usage(const char* p)
   printf("** Fetch BSA data **\n");
   printf("Usage: %s [options]\n",p);
   printf("Options: -a <IP address dotted notation> : set carrier IP\n");
+  printf("         -y <yaml file, regpath, rampath>: use yaml file\n");
   printf("         -F <array>                      : force fetch of BSA array\n");
   printf("         -I <update interval>            : retries updates\n");
   printf("         -D                              : debug\n");

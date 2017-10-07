@@ -79,6 +79,7 @@ static void show_usage(const char* p)
   printf("** Collect BSA data **\n");
   printf("Usage: %s [options]\n",p);
   printf("Options: -a <IP address dotted notation> : set carrier IP\n");
+  printf("         -y <yaml file, regpath, rampath>: use yaml file\n");
   printf("         -i <ndiag>                      : initialize BSA and diagnostics DRAM\n");
   printf("         -g <rate>,<nacq>,<nacc>,<buffer>(,<sevr>): acquire <nacq> events at <rate> into <buffer> when alarm <= <sevr>\n");
   printf("                                           rate=0 (1MHz), rate=1 (71kHz), rate=2 (10kHz),\n"
@@ -95,6 +96,9 @@ static void show_usage(const char* p)
 int main(int argc, char* argv[])
 {
   const char* ip = "192.168.2.10";
+  const char* yaml = 0;
+  const char* reg_path = 0;
+  const char* ram_path = 0;
   unsigned array=0;
   uint64_t fetch=0;
   const char* filename=0;
@@ -113,10 +117,15 @@ int main(int argc, char* argv[])
 
   char* endPtr;
   int c;
-  while( (c=getopt(argc,argv,"a:c:d:i:g:f:D:F:GN"))!=-1 ) {
+  while( (c=getopt(argc,argv,"a:c:d:i:g:f:y:D:F:GN"))!=-1 ) {
     switch(c) {
     case 'a':
       ip = optarg; break;
+    case 'y':
+      yaml = strtok(optarg,",");
+      reg_path = strtok(NULL,",");
+      ram_path = strtok(NULL,",");
+      break;
     case 'c':
       channelMask = strtoul(optarg, &endPtr, 0);
       break;
@@ -166,14 +175,20 @@ int main(int argc, char* argv[])
 
   //  try {
   {
-    Bsa::AmcCarrier hw(ip,lTPG);
+    if (!yaml) {    
+      printf("No yaml file specified\n");
+      return -1;
+    }
+    Path path = IPath::loadYamlFile(yaml,"NetIODev");
+    Bsa::AmcCarrierYaml hw(path->findByName(reg_path),
+                           path->findByName(ram_path));
 
     unsigned NArrays = hw.nArrays();
 
     if (lInit) {
       hw.initialize();
       for(unsigned i=0; i<ndiag; i++)
-        hw.initRaw(i, (1ULL<<24), true);
+        hw.initializ_(i, (1ULL<<24), true);
     }
 
     if (lDiag) {
@@ -202,16 +217,17 @@ int main(int argc, char* argv[])
     }
 
     if (nacq) {
-      MyCallback cb(hw, array);
       BeamSelect beam;
       RateSelect rsel;
       if (rate>=0) rsel = RateSelect((RateSelect::FixedRate)rate);
-      else         rsel = RateSelect((RateSelect::ACRate)(-rate),0x1);
+      else         rsel = RateSelect((RateSelect::ACRate)(-rate-1),0x3f);
 
       printf("RateSelect [%08x]\n",unsigned(rsel));
 
-      hw.start(array,beam,rsel,nacq,naccum,sevr);
-      hw.poll(cb);
+      Bsa::AmcCarrier tpg(ip, true);
+      tpg.start(array,beam,rsel,nacq,naccum,sevr);
+      // MyCallback cb(hw, array);
+      // hw.poll(cb);
     }
 
     hw.dump();

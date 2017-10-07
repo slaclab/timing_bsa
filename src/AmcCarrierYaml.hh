@@ -25,7 +25,7 @@ namespace Bsa {
     void     dump      () const;
   public:
     //  Raw Diagnostics
-    void      initialize(unsigned index,
+    void      initializ_(unsigned index,
                          uint64_t bufferSize,
                          bool     doneWhenFull=false);
     void      rearm     (unsigned index);
