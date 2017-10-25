@@ -38,6 +38,7 @@ namespace Bsa {
                         uint64_t begin) const;
     uint8_t* getBuffer (uint64_t begin,
                         uint64_t end  ) const;
+    virtual  RingState ring  (unsigned array) const = 0;
   protected:
     void    _printBuffer(Path path, ScalVal_RO ts, unsigned i,
                          uint64_t done , uint64_t full, 

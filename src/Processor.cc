@@ -21,6 +21,7 @@ namespace Bsa {
   public:
     uint64_t pending();
     int      update(PvArray&);
+    AmcCarrierBase *getHardware();
   private:
     AmcCarrierBase& _hw;
     ArrayState  _state[64];
@@ -31,6 +32,11 @@ namespace Bsa {
 using namespace Bsa;
 
 enum { BSA_FAULT_DIAG = 60 };
+
+AmcCarrierBase *ProcessorImpl::getHardware()
+{
+    return &_hw;
+}
 
 uint64_t ProcessorImpl::pending()
 {

@@ -2,6 +2,7 @@
 #define Bsa_Processor_hh
 
 #include "BsaField.hh"
+#include "AmcCarrierBase.hh"
 
 #include <vector>
 #include <stdint.h>
@@ -98,6 +99,10 @@ namespace Bsa {
     //  Return value indicates if any records were changed
     //
     virtual int update(PvArray&) = 0;
+    //
+    //  
+    //
+    virtual AmcCarrierBase *getHardware() = 0;
   };
 };
 

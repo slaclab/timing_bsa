@@ -1,3 +1,7 @@
+R1.0.3-Diag  10/03/2017   Kukhee Kim (KHKIM)
+             add interface to get AmcCarrierBase class to use dianostic buffer for sequence engine
+             temporal version, will not depoly to production
+             
 R1.0.2       08/10/2017   Kukhee Kim (KHKIM)
              Static build for test applications
 
