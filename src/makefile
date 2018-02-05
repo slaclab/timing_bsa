@@ -38,4 +38,12 @@ cpsw_duo_SRCS = cpsw_duo.cc
 cpsw_duo_LIBS = bsa $(CPSW_LIBS)
 PROGRAMS    += cpsw_duo
 
+cpu_tst_SRCS = cpu_tst.cc
+cpu_tst_LIBS = bsa $(CPSW_LIBS)
+PROGRAMS    += cpu_tst
+
+bld_control_SRCS = bld_control.cc
+bld_control_LIBS = $(CPSW_LIBS)
+PROGRAMS    += bld_control
+
 include $(CPSW_DIR)/rules.mak
