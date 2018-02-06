@@ -46,4 +46,8 @@ bld_control_SRCS = bld_control.cc
 bld_control_LIBS = $(CPSW_LIBS)
 PROGRAMS    += bld_control
 
+tpr_stream_SRCS = tpr_stream.cc
+tpr_stream_LIBS = $(CPSW_LIBS)
+PROGRAMS    += tpr_stream
+
 include $(CPSW_DIR)/rules.mak
