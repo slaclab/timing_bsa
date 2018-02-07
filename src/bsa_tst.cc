@@ -19,6 +19,8 @@
 
 #include <AmcCarrier.hh>
 #include <AmcCarrierYaml.hh>
+#include <cpsw_yaml_keydefs.h>
+#include <cpsw_yaml.h>
 
 using Bsa::BeamSelect;
 using Bsa::RateSelect;
@@ -73,6 +75,17 @@ static void dump_bsa(const Bsa::Record& record,
     printf("\n");
   }
 }
+
+class IpAddrFixup : public IYamlFixup {
+public:
+  IpAddrFixup(const char* ip) : _ip(ip) {}
+  ~IpAddrFixup() {}
+  void operator()(YAML::Node& node) {
+    writeNode(node, YAML_KEY_ipAddr, _ip);
+  }
+private:
+  const char* _ip;
+};
 
 static void show_usage(const char* p)
 {
@@ -179,7 +192,8 @@ int main(int argc, char* argv[])
       printf("No yaml file specified\n");
       return -1;
     }
-    Path path = IPath::loadYamlFile(yaml,"NetIODev");
+    IYamlFixup* fixup = new IpAddrFixup(ip);
+    Path path = IPath::loadYamlFile(yaml,"NetIODev",0,fixup);
     Bsa::AmcCarrierYaml hw(path->findByName(reg_path),
                            path->findByName(ram_path));
 
@@ -241,7 +255,18 @@ int main(int argc, char* argv[])
 
     for(unsigned fetchArray=0; fetchArray<64; fetchArray++) {
       if (fetch&(1ULL<<fetchArray)) {
-        Bsa::Record* record = hw.getRecord(fetchArray);
+        Bsa::Record* record;
+
+        if (fetchArray < 60) {
+          record = hw.getRecord(fetchArray);
+        }
+        else {
+          Bsa::ArrayState current(hw.state(fetchArray));
+          if (current.wrap)
+            record = hw.getRecord(fetchArray,current.wrAddr);
+          else
+            record = hw.getRecord(fetchArray);
+        }
 
         FILE* f = 0;
         if (filename) {

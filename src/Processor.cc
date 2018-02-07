@@ -74,32 +74,37 @@ int ProcessorImpl::update(PvArray& array)
 
     current.nacq = _state[iarray].nacq;
 
-    if (current.timestamp != _state[iarray].timestamp) {
-      //
-      //  New acquisition;  start from the beginning of the circular buffer
-      //
-      printf("NEW TS [%u] [%u.%09u -> %u.%09u]\n",
-             iarray,
-             _state[iarray].timestamp>>32,
-             _state[iarray].timestamp&0xffffffff,
-             current.timestamp>>32,
-             current.timestamp&0xffffffff);
-      array.reset(current.timestamp>>32,
-                  current.timestamp&0xffffffff);
-      current.nacq = 0; 
-      record = _hw.getRecord(iarray,&current.next);
-    }
-    else if (array.array() < BSA_FAULT_DIAG) {
-      //
-      //  Incremental update
-      //
-      record = _hw.get(iarray,_state[iarray].next,&current.next);
+    if (array.array() < BSA_FAULT_DIAG) {
+      if (current.timestamp != _state[iarray].timestamp) {
+        //
+        //  New acquisition;  start from the beginning of the circular buffer
+        //
+        printf("NEW TS [%u] [%u.%09u -> %u.%09u]\n",
+               iarray,
+               _state[iarray].timestamp>>32,
+               _state[iarray].timestamp&0xffffffff,
+               current.timestamp>>32,
+               current.timestamp&0xffffffff);
+        array.reset(current.timestamp>>32,
+                    current.timestamp&0xffffffff);
+        current.nacq = 0; 
+        record = _hw.getRecord(iarray,&current.next);
+      }
+      else {
+        //
+        //  Incremental update
+        //
+        record = _hw.get(iarray,_state[iarray].next,&current.next);
+      }
     }
     else {
       //
       //  For fault diagnostics, just replace the entire waveform with new data.
       //
-      record = _hw.get(iarray,current.wrAddr,&current.next);
+      if (current.wrap)
+        record = _hw.getRecord(iarray,current.wrAddr);
+      else
+        record = _hw.getRecord(iarray);
     }
 
     if (_debug) {
