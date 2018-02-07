@@ -1,3 +1,6 @@
+R1.0.4       02/07/2018   Matt Weaver (weaver)
+             Fix handling of fault buffers when wrapped
+
 R1.0.3       01/29/2018   Kukhee Kim (KHKIM)
              Clean up
              
