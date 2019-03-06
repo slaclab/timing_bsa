@@ -20,6 +20,8 @@ void usage(const char* p) {
   printf("         -y <yaml file>[,<path to timing>]\n");
   printf("         -m <channel mask>\n");
   printf("         -p <words> (max packet size)\n");
+  printf("         -d <packets> (dump packets and exit)\n");
+  printf("         -D (disable BLD channel)\n");
 }
 
 namespace Bld {
@@ -50,9 +52,9 @@ namespace Bld {
       _buff(reinterpret_cast<const uint32_t*>(b)),
       _end (reinterpret_cast<const uint32_t*>(b+sz)),
       _next(_buff)
-    { first(); }
+    { first(sz); }
   public:
-    void first()
+    void first(size_t sz)
     {
       v.timeStamp = _buff[1]; v.timeStamp <<= 32; v.timeStamp += _buff[0];
       v.pulseId   = _buff[3]; v.pulseId   <<= 32; v.pulseId   += _buff[2];
@@ -63,6 +65,17 @@ namespace Bld {
         v.channels.push_back(_buff[i++]);
       v.valid     = _buff[i++];
       _next    = _buff+i;
+
+      //
+      //  Validate size of packet (sz = sizeof_first + n*sizeof_next)
+      //
+      unsigned sizeof_first = 4*i;
+      unsigned sizeof_next  = 4*(i-4);
+      if ( ((sz - sizeof_first)%sizeof_next) != 0 ) {
+        printf("BldEventIterator:first() size of packet error : sz %u, first %u, next %u\n",
+               sz, sizeof_first, sizeof_next);
+        abort();
+      }
     }
     bool next()
     {
@@ -105,6 +118,10 @@ static void sigHandler( int signal )
 
   unsigned zero(0);
   IScalVal::create(core->findByName("AmcCarrierCore/AmcCarrierBsa/BldAxiStream/Enable"))->setVal((uint32_t*)&zero);
+
+  //  These are unnecessary
+  // IScalVal::create(core->findByName("AmcCarrierCore/TimingUdpClient[0]/ClientRemoteIp"))->setVal((uint32_t*)&zero);
+  // IScalVal::create(core->findByName("AmcCarrierCore/TimingUdpClient[0]/ClientRemotePort"))->setVal((uint32_t*)&zero);
   
   printf("BLD disabled\n");
   ::exit(signal);
@@ -112,12 +129,17 @@ static void sigHandler( int signal )
 
 void* countThread(void* args)
 {
+  int fd = *(int*)args;
+
   timespec tv;
   clock_gettime(CLOCK_REALTIME,&tv);
   unsigned ocount = count;
   unsigned oevent = event;
   int64_t  obytes = bytes;
   while(1) {
+    //  Send a packet to open the connection
+    ::send(fd, &fd, sizeof(fd), 0);
+
     usleep(1000000);
     timespec otv = tv;
     clock_gettime(CLOCK_REALTIME,&tv);
@@ -197,9 +219,11 @@ int main(int argc, char* argv[])
   const char* yaml_path = "mmio/AmcCarrierEmpty";
   unsigned mask = 1;
   unsigned psize(0x3c0);
+  int ndump = -1;
+  bool lDisable = false;
   const char* endptr;
 
-  while ( (c=getopt( argc, argv, "a:y:m:p:")) != EOF ) {
+  while ( (c=getopt( argc, argv, "a:y:m:p:d:D")) != EOF ) {
     switch(c) {
     case 'a':
       ip = optarg;
@@ -218,6 +242,12 @@ int main(int argc, char* argv[])
     case 'p':
       psize = strtoul(optarg,NULL,0);
       break;
+    case 'd':
+      ndump = strtoul(optarg,NULL,0);
+      break;
+    case 'D':
+      lDisable = true;
+      break;
     default:
       usage(argv[0]);
       return 0;
@@ -235,10 +265,17 @@ int main(int argc, char* argv[])
 
   core = path->findByName(yaml_path);
 
-  ::signal( SIGINT  , sigHandler );
-  ::signal( SIGABRT , sigHandler );
-  ::signal( SIGKILL , sigHandler );
-  ::signal( SIGSEGV , sigHandler );
+  struct sigaction sa;
+  sa.sa_handler = sigHandler;
+  sa.sa_flags = SA_RESETHAND;
+
+  sigaction(SIGINT ,&sa,NULL);
+  sigaction(SIGABRT,&sa,NULL);
+  sigaction(SIGKILL,&sa,NULL);
+  sigaction(SIGSEGV,&sa,NULL);
+
+  if (lDisable)
+    abort();
 
   int fd = ::socket(AF_INET, SOCK_DGRAM, 0);
   if (fd < 0) {
@@ -277,12 +314,10 @@ int main(int argc, char* argv[])
   }
 
   //  Set the target address
-  unsigned lip   = ntohl(haddr.sin_addr.s_addr);
-  unsigned lport = ntohs(haddr.sin_port);
-
-  IScalVal::create(core->findByName("AmcCarrierCore/TimingUdpClient[0]/ClientRemoteIp"))->setVal((uint32_t*)&lip);
-  IScalVal::create(core->findByName("AmcCarrierCore/TimingUdpClient[0]/ClientRemotePort"))->setVal((uint32_t*)&lport);
-    
+  // unsigned lip   = ntohl(haddr.sin_addr.s_addr);
+  // unsigned lport = ntohs(haddr.sin_port);
+  // IScalVal::create(core->findByName("AmcCarrierCore/TimingUdpClient[0]/ClientRemoteIp"))->setVal((uint32_t*)&lip);
+  // IScalVal::create(core->findByName("AmcCarrierCore/TimingUdpClient[0]/ClientRemotePort"))->setVal((uint32_t*)&lport);
 
   unsigned one(-1);
   uint64_t onell(-1ULL);
@@ -294,9 +329,9 @@ int main(int argc, char* argv[])
   {
     uint32_t v;
     IScalVal::create(core->findByName("AmcCarrierCore/AmcCarrierBsa/BldAxiStream/PacketSize"))->getVal(&v);
-    printf("PacketSize: %u words\n");
+    printf("PacketSize: %u words\n",v);
     IScalVal_RO::create(core->findByName("AmcCarrierCore/AmcCarrierBsa/BldAxiStream/WordCount"))->getVal(&v);
-    printf("WordCount : %u words\n");
+    printf("WordCount : %u words\n",v);
   }
     
   IScalVal::create(core->findByName("AmcCarrierCore/AmcCarrierBsa/BldAxiStream/Enable"))->setVal((uint32_t*)&one);
@@ -307,24 +342,35 @@ int main(int argc, char* argv[])
   uint64_t dpid = 0, opid=0;
   do {
     ssize_t ret = read(fd,buff,buffsize);
-    if (ret < 0) break;
-    count++;
-    bytes += ret;
-    BldEventIterator it(buff,ret);
-    do {
-      BldEvent ev = *it;
-      lanes |= ev.valid;
-      event++;
+    if (ret < 0) abort();
+    if (ndump==0) abort();
+    if (ndump>0) {
+      ret = (ret+3)>>2;
+      const unsigned *p = reinterpret_cast<const unsigned*>(buff);
+      for(unsigned i=0; i<ret; i++)
+        printf("%08x%c", p[i], (i%8)==7 ?'\n':' ');
+      printf("\n");
+      ndump--;
+    }
+    else {
+      count++;
+      bytes += ret;
+      BldEventIterator it(buff,ret);
+      do {
+        BldEvent ev = *it;
+        lanes |= ev.valid;
+        event++;
 
-      uint64_t ndpid = ev.pulseId - opid;
-      if (opid!=0 && (ndpid!=dpid)) {
-        printf("Delta PID change: %u -> %u\n", dpid&0xffffffff, ndpid&0xffffffff);
-        dpid = ndpid;
-        opid = ev.pulseId;
-      }
-      else
-        opid = ev.pulseId;
-    } while(it.next());
+        uint64_t ndpid = ev.pulseId - opid;
+        if (opid!=0 && (ndpid!=dpid)) {
+          printf("Delta PID change: %u -> %u\n", dpid&0xffffffff, ndpid&0xffffffff);
+          dpid = ndpid;
+          opid = ev.pulseId;
+        }
+        else
+          opid = ev.pulseId;
+      } while(it.next());
+    }
   } while(1);
 
   pthread_join(thr,NULL);

@@ -50,4 +50,8 @@ tpr_stream_SRCS = tpr_stream.cc
 tpr_stream_LIBS = $(CPSW_LIBS)
 PROGRAMS    += tpr_stream
 
+tpr_peek_SRCS = tpr_peek.cc
+tpr_peek_LIBS = $(CPSW_LIBS)
+PROGRAMS    += tpr_peek
+
 include $(CPSW_DIR)/rules.mak

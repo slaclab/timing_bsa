@@ -56,7 +56,7 @@ static Path     core;
 
 static void sigHandler( int signal ) 
 {
-  psignal(signal, "bld_control received signal");
+  psignal(signal, "tpr_stream received signal");
 
   unsigned zero(0);
   IScalVal::create(core->findByName("AmcCarrierCore/TimingUdpClient[0]/ClientRemoteIp"))->setVal((uint32_t*)&zero);
@@ -67,11 +67,14 @@ static void sigHandler( int signal )
 
 void* countThread(void* args)
 {
+  int fd = *(int*)args;
+
   timespec tv;
   clock_gettime(CLOCK_REALTIME,&tv);
   unsigned ocount = count;
   int64_t  obytes = bytes;
   while(1) {
+    send(fd, &fd, sizeof(fd), 0);
     usleep(1000000);
     timespec otv = tv;
     clock_gettime(CLOCK_REALTIME,&tv);
@@ -210,11 +213,11 @@ int main(int argc, char* argv[])
   }
 
   //  Set the target address
-  unsigned lip   = ntohl(haddr.sin_addr.s_addr);
-  unsigned lport = ntohs(haddr.sin_port);
+  // unsigned lip   = ntohl(haddr.sin_addr.s_addr);
+  // unsigned lport = ntohs(haddr.sin_port);
 
-  IScalVal::create(core->findByName("AmcCarrierCore/TimingUdpClient[0]/ClientRemoteIp"))->setVal((uint32_t*)&lip);
-  IScalVal::create(core->findByName("AmcCarrierCore/TimingUdpClient[0]/ClientRemotePort"))->setVal((uint32_t*)&lport);
+  // IScalVal::create(core->findByName("AmcCarrierCore/TimingUdpClient[0]/ClientRemoteIp"))->setVal((uint32_t*)&lip);
+  // IScalVal::create(core->findByName("AmcCarrierCore/TimingUdpClient[0]/ClientRemotePort"))->setVal((uint32_t*)&lport);
     
   const unsigned buffsize=8*1024;
   char* buff = new char[buffsize];
