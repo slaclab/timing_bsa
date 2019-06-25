@@ -80,7 +80,7 @@ class IpAddrFixup : public IYamlFixup {
 public:
   IpAddrFixup(const char* ip) : _ip(ip) {}
   ~IpAddrFixup() {}
-  void operator()(YAML::Node& node) {
+  void operator()(YAML::Node& node, YAML::Node& dummy) {
     writeNode(node, YAML_KEY_ipAddr, _ip);
   }
 private:
