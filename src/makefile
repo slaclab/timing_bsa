@@ -4,7 +4,7 @@ CCACHE_DISABLE=1
 #LDFLAGS += -Wl,-Bstatic -static-libgcc
 #LDFLAGS += -Wl,-Bstatic
 #
-CPSW_DIR=/afs/slac/g/lcls/package/cpsw/framework/R4.3.1/src
+CPSW_DIR=/afs/slac/g/lcls/package/cpsw/framework/R4.4.1/src
 
 # may override CPSW_DIR / DEVICELIB_DIR from release.mak
 # must set SRCDIR (is redefined by recursive make)
