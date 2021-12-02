@@ -16,8 +16,8 @@ INSTALL_DIR=../
 
 #HEADERS = RamControl.hh TPGMini.hh TPG.hh AmcCarrier.hh
 CXXFLAGS = -g -DFRAMEWORK_R3_4
-HEADERS = BsaField.hh Processor.hh BsaDefs.hh AmcCarrierBase.hh AmcCarrier.hh AmcCarrierYaml.hh
-bsa_SRCS += RamControl.cc TPGMini.cc TPG.cc AmcCarrierBase.cc AmcCarrier.cc AmcCarrierYaml.cc BsaDefs.cc
+HEADERS = BsaField.hh Processor.hh BsaDefs.hh AmcCarrierBase.hh AmcCarrier.hh AmcCarrierYaml.hh BsssYaml.hh
+bsa_SRCS += RamControl.cc TPGMini.cc TPG.cc AmcCarrierBase.cc AmcCarrier.cc AmcCarrierYaml.cc BsaDefs.cc BsssYaml.cc
 bsa_SRCS += Processor.cc
 
 STATIC_LIBRARIES+=bsa

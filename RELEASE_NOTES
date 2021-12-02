@@ -1,3 +1,6 @@
+R2.0.0       12/02/2021   Kukhee Kim
+             support Beam Synchronous Scalar Service (BSSSS)
+
 R1.2.0       01/29/2020   Kukhee Kim
              build with cpsw/framework R4.4.1 and buildroot-2019.08
 R1.1.5       10/28/2019   Kukhee Kim
