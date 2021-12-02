@@ -168,9 +168,9 @@ void BsssYaml::setEdefEnable(int chn, uint32_t enable)
     CPSW_TRY_CATCH(_EdefEnable[chn]->setVal(enable?(uint32_t) 1: (uint32_t) 0));
 }
 
-void BsssYaml::setChannelSevr(int chn, uint32_t sevr)
+void BsssYaml::setChannelSevr(int chn, uint64_t sevr)
 {
-    uint32_t channelSevr;
+    uint64_t channelSevr;
 
     CPSW_TRY_CATCH(_channelSevr->getVal(&channelSevr));
     channelSevr |= (0x3 & sevr) << (chn * 2);
