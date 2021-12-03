@@ -177,6 +177,11 @@ void BsssYaml::setChannelSevr(int chn, uint64_t sevr)
     CPSW_TRY_CATCH(_channelSevr->setVal(channelSevr));
 }
 
+void BsssYaml::setChannelSevr(uint64_t sevr)
+{
+    CPSW_TRY_CATCH(_channelSevr->setVal(sevr));
+}
+
 void BsssYaml::setChannelMask(int chn, uint32_t enable)
 {
     uint32_t channelMask;
@@ -184,6 +189,11 @@ void BsssYaml::setChannelMask(int chn, uint32_t enable)
     CPSW_TRY_CATCH(_channelMask->getVal(&channelMask));
     channelMask |= (0x1 & enable?0x1:0x0) << chn;
     CPSW_TRY_CATCH(_channelMask->setVal(channelMask));
+}
+
+void BsssYaml::setChannelMask(uint32_t mask)
+{
+    CPSW_TRY_CATCH(_channelMask->setVal(mask));
 }
 
 void BsssYaml::setPacketSize(uint32_t size)

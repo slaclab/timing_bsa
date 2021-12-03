@@ -37,7 +37,9 @@ namespace Bsss {
 
             // channel number correspnds to the BSSS data channels
             void setChannelSevr(int chn, uint64_t sevr);
+            void setChannelSevr(uint64_t sevr);
             void setChannelMask(int chn, uint32_t enable);
+            void setChannelMask(uint32_t enable);
             void setPacketSize(uint32_t size);
             void enablePacket(uint32_t enable);
 
