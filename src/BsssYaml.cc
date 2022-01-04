@@ -44,7 +44,7 @@ BsssYaml::BsssYaml(Path bsss_path)
     _channelSevr = IScalVal::create(_path->findByName("channelSevr"));
 
     _currPacketSize  = IScalVal_RO::create(_path->findByName("currPacketSize"));
-    _currPacketState = IScalVal_RO::create(_path->findByName("currrPacketState"));
+    _currPacketState = IScalVal_RO::create(_path->findByName("currPacketState"));
     _currPulseIdL    = IScalVal_RO::create(_path->findByName("currPulseIdL"));
     _currTimeStampL  = IScalVal_RO::create(_path->findByName("currTimeStampL"));
     _currDelta       = IScalVal_RO::create(_path->findByName("currDelta"));
