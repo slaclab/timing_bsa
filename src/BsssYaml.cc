@@ -173,8 +173,8 @@ void BsssYaml::setChannelSevr(int chn, uint64_t sevr)
     uint64_t channelSevr;
 
     CPSW_TRY_CATCH(_channelSevr->getVal(&channelSevr));
-    channelSevr &= ~(0x3 << (chn *2));           /* clear mask */
-    channelSevr |= (0x3 & sevr) << (chn * 2);    /* set mask */
+    channelSevr &= ~((uint64_t)(0x3) << (chn *2));           /* clear mask */
+    channelSevr |= ((uint64_t)(0x3) & sevr) << (chn * 2);    /* set mask */
     CPSW_TRY_CATCH(_channelSevr->setVal(channelSevr));
 }
 
