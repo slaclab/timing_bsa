@@ -1,3 +1,6 @@
+R2.0.0-prep-bsas    03/30/2022   Kukhee Kim
+             branched out from R2.0.0 to support BSAS
+
 R2.0.0       12/02/2021   Kukhee Kim
              support Beam Synchronous Scalar Service (BSSSS)
              add verbosity option for un-necessary debugging messages
