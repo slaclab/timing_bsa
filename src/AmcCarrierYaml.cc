@@ -39,7 +39,6 @@ using namespace Bsa;
 AmcCarrierYaml::AmcCarrierYaml(Path mmio,
                                Path dram) 
 {
-  printf("AmcCarrierYaml ctor\n");
   _path   = mmio;
   _dram   = IScalVal_RO::create( dram );
   _bpath  = mmio->findByName("BsaBufferControl/BsaBuffers");
@@ -54,11 +53,8 @@ AmcCarrierYaml::AmcCarrierYaml(Path mmio,
   _sInit     = IScalVal   ::create( _bpath->findByName("Init") );
   _sError    = IScalVal_RO::create( _bpath->findByName("Error") );
   _sStatus   = IScalVal_RO::create( _bpath->findByName("Status") );
-  printf("_tstamp ctor\n");
   _tstamp    = IScalVal_RO::create( _path ->findByName("BsaBufferControl/Timestamps/MemoryArray") );
-  printf("_sClear ctor\n");
   _sClear    = IScalVal   ::create( _path ->findByName("BsaBufferControl/BufferInit/MemoryArray") );
-  printf("_startAddr ctor\n");
   _startAddr = IScalVal   ::create( _bpath->findByName("StartAddr") );
   _endAddr   = IScalVal   ::create( _bpath->findByName("EndAddr") );
   _wrAddr    = IScalVal_RO::create( _bpath->findByName("WrAddr") );

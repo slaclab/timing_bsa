@@ -36,7 +36,6 @@ void     AmcCarrierBase::initialize()
 
   //  Setup the standard BSA arrays (32k entries)
   const uint64_t bsaSize = 3ULL<<7;  // one entry
-  unsigned v;
   for(unsigned i=0; i<60; i++) {
     pn = p+(1ULL<<15)*bsaSize;
     IndexRange rng(i);
@@ -45,13 +44,7 @@ void     AmcCarrierBase::initialize()
     _sEnabled ->setVal(&uone,1,&rng);
     _sMode    ->setVal(&uzro,1,&rng);
     _sInit    ->setVal(&uone,1,&rng);
-    _sInit    ->getVal(&v   ,1,&rng);
-    if (v!=uone)
-      printf("Error verifying Init->1 [%d]\n",i);
     _sInit    ->setVal(&uzro,1,&rng);
-    _sInit    ->getVal(&v   ,1,&rng);
-    if (v!=uzro)
-      printf("Error verifying Init->0 [%d]\n",i);
     p = pn;
   }
   //  Setup the fault arrays to be LARGER (1M entries)

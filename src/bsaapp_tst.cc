@@ -261,9 +261,6 @@ int main(int argc, char* argv[])
     }
   }
 
-  if (lDebug)
-    printf("Constructing PVArray\n");
-
   std::vector<TextPvArray*> pva;
 
   for(unsigned a = 0; a<64; a++) {
@@ -280,19 +277,11 @@ int main(int argc, char* argv[])
 
   Bsa::Processor* p;
   if (yaml) {
-    if (lDebug)
-      printf("Load yaml file\n");
     IYamlFixup* fixup = new IpAddrFixup(ip);
     Path path = IPath::loadYamlFile(yaml,"NetIODev",0,fixup);
 
-    if (lDebug)
-      printf("Reg Path lookup\n");
     Path path_reg(path->findByName(reg_path));
-    if (lDebug)
-      printf("Ram Path lookup\n");
     Path path_ram(path->findByName(ram_path));
-    if (lDebug)
-      printf("Create Bsa Processor\n");
     p = Bsa::Processor::create(path_reg,
                                path_ram,
                                false);
@@ -302,9 +291,6 @@ int main(int argc, char* argv[])
   }
 
   //  ::signal( SIGINT, sigHandler );
-
-  if (lDebug)
-    printf("Entering loop\n");
 
   //
   //  We simulate periodic update requests here
