@@ -24,6 +24,7 @@ namespace Bsa {
                         uint64_t end) const;
   public:
     void     initialize();
+    void     ackClear  (unsigned array);
     uint64_t inprogress() const;
     uint64_t done      () const;
     bool     done      (unsigned array) const;
@@ -62,6 +63,7 @@ namespace Bsa {
     ScalVal_RO _sError;
     ScalVal_RO _sStatus;
     ScalVal_RO _tstamp;
+    ScalVal    _sClear;
     ScalVal    _startAddr;
     ScalVal    _endAddr;
     ScalVal_RO _wrAddr;

@@ -23,6 +23,8 @@
 #include <AmcCarrier.hh>
 
 #include <cpsw_api_user.h>
+#include <cpsw_yaml_keydefs.h>
+#include <cpsw_yaml.h>
 
 static void sigHandler( int signal ) {
   Bsa::AmcCarrier::instance()->dump();
@@ -166,6 +168,14 @@ public:
       _pvs[i]->setTimestamp(sec,nsec);
     }
   }
+  void     set(unsigned sec,
+               unsigned nsec) {
+    _ts_sec = sec;
+    _ts_nsec = nsec;
+    for(unsigned i=0; i<_pvs.size(); i++) {
+      _pvs[i]->setTimestamp(sec,nsec);
+    }
+  }
   void     append(uint64_t pulseId) { _pid.append(pulseId); }
   std::vector<Bsa::Pv*> pvs() { return std::vector<Bsa::Pv*>(_pvs); }
   void flush() {
@@ -180,6 +190,17 @@ private:
   unsigned _ts_nsec;
   CircularBuffer<uint64_t> _pid;
   std::vector<Bsa::Pv*> _pvs;
+};
+
+class IpAddrFixup : public IYamlFixup {
+public:
+  IpAddrFixup(const char* ip) : _ip(ip) {}
+  ~IpAddrFixup() {}
+  void operator()(YAML::Node& node, YAML::Node& dummy) {
+    writeNode(node, YAML_KEY_ipAddr, _ip);
+  }
+private:
+  const char* _ip;
 };
 
 //=======================================================
@@ -199,8 +220,8 @@ int main(int argc, char* argv[])
 {
   const char* ip = "192.168.2.10";
   const char* yaml = 0;
-  const char* reg_path = 0;
-  const char* ram_path = 0;
+  const char* reg_path = "mmio/AmcCarrierCore/AmcCarrierBsa";
+  const char* ram_path = "strm/AmcCarrierDRAM/dram";
   uint64_t array=-1ULL;
   unsigned uinterval=1000000;
   bool     lInit=false;
@@ -219,8 +240,11 @@ int main(int argc, char* argv[])
       break;
     case 'y':
       yaml = strtok(optarg,",");
-      reg_path = strtok(NULL,",");
-      ram_path = strtok(NULL,",");
+      { const char* reg_p = strtok(NULL,",");
+        const char* ram_p = strtok(NULL,",");
+        if (reg_p) reg_path = reg_p;
+        if (ram_p) ram_path = ram_p;
+      }
       break;
     case 'F':
       array = strtoull(optarg,NULL,0);
@@ -236,6 +260,9 @@ int main(int argc, char* argv[])
       exit(1);
     }
   }
+
+  if (lDebug)
+    printf("Constructing PVArray\n");
 
   std::vector<TextPvArray*> pva;
 
@@ -253,9 +280,21 @@ int main(int argc, char* argv[])
 
   Bsa::Processor* p;
   if (yaml) {
-    Path path = IPath::loadYamlFile(yaml,"NetIODev");
-    p = Bsa::Processor::create(path->findByName(reg_path),
-                               path->findByName(ram_path),
+    if (lDebug)
+      printf("Load yaml file\n");
+    IYamlFixup* fixup = new IpAddrFixup(ip);
+    Path path = IPath::loadYamlFile(yaml,"NetIODev",0,fixup);
+
+    if (lDebug)
+      printf("Reg Path lookup\n");
+    Path path_reg(path->findByName(reg_path));
+    if (lDebug)
+      printf("Ram Path lookup\n");
+    Path path_ram(path->findByName(ram_path));
+    if (lDebug)
+      printf("Create Bsa Processor\n");
+    p = Bsa::Processor::create(path_reg,
+                               path_ram,
                                false);
   }
   else {
@@ -263,6 +302,9 @@ int main(int argc, char* argv[])
   }
 
   //  ::signal( SIGINT, sigHandler );
+
+  if (lDebug)
+    printf("Entering loop\n");
 
   //
   //  We simulate periodic update requests here

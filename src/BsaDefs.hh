@@ -39,12 +39,13 @@ namespace Bsa {
 
   class ArrayState {
   public:
-    ArrayState() : timestamp(0), wrAddr(0), next(0), wrap(0), nacq(0) {}
+    ArrayState() : timestamp(0), wrAddr(0), next(0), clear(0), wrap(0), nacq(0) {}
     bool operator!=(const ArrayState& o) const { return timestamp!=o.timestamp || wrAddr!=o.wrAddr; }
   public:
     uint64_t timestamp;
     uint64_t wrAddr;
     uint64_t next;
+    unsigned clear;
     unsigned wrap;
     unsigned nacq;
   };

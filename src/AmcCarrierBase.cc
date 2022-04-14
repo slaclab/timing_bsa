@@ -36,6 +36,7 @@ void     AmcCarrierBase::initialize()
 
   //  Setup the standard BSA arrays (32k entries)
   const uint64_t bsaSize = 3ULL<<7;  // one entry
+  unsigned v;
   for(unsigned i=0; i<60; i++) {
     pn = p+(1ULL<<15)*bsaSize;
     IndexRange rng(i);
@@ -44,7 +45,13 @@ void     AmcCarrierBase::initialize()
     _sEnabled ->setVal(&uone,1,&rng);
     _sMode    ->setVal(&uzro,1,&rng);
     _sInit    ->setVal(&uone,1,&rng);
+    _sInit    ->getVal(&v   ,1,&rng);
+    if (v!=uone)
+      printf("Error verifying Init->1 [%d]\n",i);
     _sInit    ->setVal(&uzro,1,&rng);
+    _sInit    ->getVal(&v   ,1,&rng);
+    if (v!=uzro)
+      printf("Error verifying Init->0 [%d]\n",i);
     p = pn;
   }
   //  Setup the fault arrays to be LARGER (1M entries)
@@ -63,6 +70,12 @@ void     AmcCarrierBase::initialize()
   _memEnd = p;
 }
 
+void     AmcCarrierBase::ackClear  (unsigned array)
+{
+  uint32_t   uzro=0;
+  IndexRange rng(array);
+  _sClear->setVal(&uzro,1,&rng);
+}
 
 uint64_t AmcCarrierBase::inprogress() const
 {
@@ -111,6 +124,7 @@ ArrayState AmcCarrierBase::state   (unsigned array) const
   IndexRange rng(array);
   _tstamp->getVal(&s.timestamp,1,&rng);
   _wrAddr->getVal(&s.wrAddr   ,1,&rng);
+  _sClear->getVal(&s.clear    ,1,&rng);
   _sFull ->getVal(&s.wrap     ,1,&rng);
   return s;
 }
@@ -119,10 +133,13 @@ const std::vector<ArrayState>& AmcCarrierBase::state()
 {
   uint64_t tstamp[64];
   uint64_t wrAddr[64];
+  unsigned clear [64];
   _tstamp->getVal(tstamp,64);
+  _sClear->getVal(clear ,64);
   _wrAddr->getVal(wrAddr,64);
   for(unsigned i=0; i<64; i++) {
     _state[i].timestamp = tstamp[i];
+    _state[i].clear     = clear [i];
     _state[i].wrAddr    = wrAddr[i];
   }
 
