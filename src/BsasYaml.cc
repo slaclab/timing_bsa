@@ -30,51 +30,52 @@ BsasControlYaml::BsasControlYaml(Path path)
 
 void BsasControlYaml::Enable(uint32_t enable)
 {
+    CPSW_TRY_CATCH(_enable->setVal(enable? uint32_t(1): uint32_t(0)));
 }
 
 void BsasControlYaml::SetFixedRate(uint32_t rate)
 {
     uint32_t _rate = (0x000000<<11) | (0x0000000f & rate);
-    CPSW_TRY_CATCH(_rateSel->setVal(&_rate));
+    CPSW_TRY_CATCH(_rateSel->setVal(_rate));
 
 }
 
 void BsasControlYaml::SetACRate(uint32_t ts_mask, uint32_t rate)
 {
     uint32_t _rate = (0x00000001<<11) | (0x0000003f & ts_mask)<< 3 | (0x00000007 & rate);
-    CPSW_TRY_CATCH(_rateSel->setVal(&_rate));
+    CPSW_TRY_CATCH(_rateSel->setVal(_rate));
 }
 
 void BsasControlYaml::SetSeqBit(uint32_t seq_bit)
 {
     uint32_t _seq_bit = (0x00000002<<11) | (0x000003ff & seq_bit);
-    CPSW_TRY_CATCH(_rateSel->setVal(&_seq_bit));
+    CPSW_TRY_CATCH(_rateSel->setVal(_seq_bit));
 }
 
 void BsasControlYaml::SetSeqBit(uint32_t seq_num, uint32_t seq_bit)
 {
     uint32_t _seq_bit = (seq_num &0x1f) << 4 | (seq_bit & 0xf);
     uint32_t _seq     = (0x00000002<<11) | (0x000003ff & _seq_bit);
-    CPSW_TRY_CATCH(_rateSel->setVal(&_seq));
+    CPSW_TRY_CATCH(_rateSel->setVal(_seq));
 }
 
 void BsasControlYaml::SetInclusionMask(uint32_t dest_mask)
 {
     uint32_t _mask = (0x00000000<<16) | (0x0000ffff & dest_mask);
-    CPSW_TRY_CATCH(_destSel->setVal(&_mask))
+    CPSW_TRY_CATCH(_destSel->setVal(_mask))
 }
 
 void BsasControlYaml::SetExclusionMask(uint32_t dest_mask)
 {
     uint32_t _mask = (0x00000001<<16) | (0x0000ffff & dest_mask);
-    CPSW_TRY_CATCH(_destSel->setVal(&_mask));
+    CPSW_TRY_CATCH(_destSel->setVal(_mask));
 
 }
 
 void BsasControlYaml::DisableDestination(void)
 {
     uint32_t _mask = (0x00000002<<16);
-    CPSW_TRY_CATCH(_destSel->setVal(&_mask));
+    CPSW_TRY_CATCH(_destSel->setVal(_mask));
 }
 
 
