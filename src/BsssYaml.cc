@@ -41,7 +41,6 @@ BsssYaml::BsssYaml(Path bsss_path)
     _packetSize  = IScalVal::create(_path->findByName("packetSize"));
     _enable      = IScalVal::create(_path->findByName("enable"));
     _channelMask = IScalVal::create(_path->findByName("channelMask"));
-    _channelSevr = IScalVal::create(_path->findByName("channelSevr"));
 
     _currPacketSize  = IScalVal_RO::create(_path->findByName("currPacketSize"));
     _currPacketState = IScalVal_RO::create(_path->findByName("currPacketState"));
@@ -168,20 +167,6 @@ void BsssYaml::setEdefEnable(int chn, uint32_t enable)
     CPSW_TRY_CATCH(_EdefEnable[chn]->setVal(enable?(uint32_t) 1: (uint32_t) 0));
 }
 
-void BsssYaml::setChannelSevr(int chn, uint64_t sevr)
-{
-    uint64_t channelSevr;
-
-    CPSW_TRY_CATCH(_channelSevr->getVal(&channelSevr));
-    channelSevr &= ~((uint64_t)(0x3) << (chn *2));           /* clear mask */
-    channelSevr |= ((uint64_t)(0x3) & sevr) << (chn * 2);    /* set mask */
-    CPSW_TRY_CATCH(_channelSevr->setVal(channelSevr));
-}
-
-void BsssYaml::setChannelSevr(uint64_t sevr)
-{
-    CPSW_TRY_CATCH(_channelSevr->setVal(sevr));
-}
 
 void BsssYaml::setChannelMask(int chn, uint32_t enable)
 {
