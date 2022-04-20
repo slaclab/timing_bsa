@@ -38,15 +38,26 @@ namespace Bsas {
             BsasModuleYaml(Path path);
             virtual ~BsasModuleYaml() {}
 
+            void Enable(uint32_t enable);
+            void SetChannelMask(uint32_t mask);
+            void SetChannelMask(int chn, uint32_t mask);
+            void SetChannelSeverity(uint64_t sevr);
+            void SetChannelSeverity(int chn, uint64_t sevr);
+
             BsasControlYaml *pAcquire;
             BsasControlYaml *pRowAdvance;
             BsasControlYaml *pTableReset;
 
         protected:
             Path _path;
+            Path _path_bsasStream;
             Path _path_acquire;
             Path _path_rowAdvance;
             Path _path_tableReset;
+
+            ScalVal  _enable;          // BSAS stream control, enable and disable
+            ScalVal  _channelMask;     // BSAS stream control, enable and disable the data channel
+            ScalVal  _channelSevr;     // BSAS stream control, severity filtering
     };
 
 

@@ -82,13 +82,55 @@ void BsasControlYaml::DisableDestination(void)
 BsasModuleYaml::BsasModuleYaml(Path path)
 {
     _path = path;
+    CPSW_TRY_CATCH(_path_bsasStream = _path->findByName("BsasStream"));
     CPSW_TRY_CATCH(_path_acquire    = _path->findByName("Acquire"));
     CPSW_TRY_CATCH(_path_rowAdvance = _path->findByName("RowAdvance"));
     CPSW_TRY_CATCH(_path_tableReset = _path->findByName("TableReset"));
 
+    CPSW_TRY_CATCH(_enable      = IScalVal::create(_path_bsasStream->findByName("enable")));
+    CPSW_TRY_CATCH(_channelMask = IScalVal::create(_path_bsasStream->findByName("channelMask")));
+    CPSW_TRY_CATCH(_channelSevr = IScalVal::create(_path_bsasStream->findByName("channelSevr")));
+
+
     CPSW_TRY_CATCH(pAcquire    = new BsasControlYaml(_path_acquire));
     CPSW_TRY_CATCH(pRowAdvance = new BsasControlYaml(_path_rowAdvance));
     CPSW_TRY_CATCH(pTableReset = new BsasControlYaml(_path_tableReset));
+}
+
+void BsasModuleYaml::Enable(uint32_t enable)
+{
+    CPSW_TRY_CATCH(_enable->setVal(enable?1:0));
+}
+
+void BsasModuleYaml::SetChannelMask(uint32_t mask)
+{
+    CPSW_TRY_CATCH(_channelMask->setVal(mask));
+}
+
+void BsasModuleYaml::SetChannelMask(int chn, uint32_t enable)
+{
+    uint32_t channelMask;
+
+    CPSW_TRY_CATCH(_channelMask->getVal(&channelMask));
+    channelMask &= ~((uint32_t(0x1)) << chn);
+    channelMask != ((uint32_t(enable?1:0)) << chn);
+    CPSW_TRY_CATCH(_channelMask->setVal(channelMask));
+}
+
+void BsasModuleYaml::SetChannelSeverity(uint64_t sevr)
+{
+    CPSW_TRY_CATCH(_channelSevr->setVal(sevr));
+}
+
+void BsasModuleYaml::SetChannelSeverity(int chn, uint64_t sevr)
+{
+    uint64_t channelSevr;
+
+    CPSW_TRY_CATCH(_channelSevr->getVal(&channelSevr));
+    channelSevr &= ~((uint64_t(0x3)) << (chn*2));
+    channelSevr |= ((uint64_t(0x3) & sevr) << (chn * 2));
+    CPSW_TRY_CATCH(_channelSevr->setVal(channelSevr));
+
 }
 
 
