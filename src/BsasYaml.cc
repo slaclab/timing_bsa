@@ -20,7 +20,7 @@ using namespace Bsas;
 BsasControlYaml::BsasControlYaml(Path path)
 {
     _path = path;
-    CPSW_TRY_CATCH(_count   = IScalVal_RO::create(_path->findByName("count")));
+    CPSW_TRY_CATCH(_count   = IScalVal_RO::create(_path->findByName("Count")));
     CPSW_TRY_CATCH(_enable  = IScalVal   ::create(_path->findByName("Enable")));
     CPSW_TRY_CATCH(_rateSel = IScalVal   ::create(_path->findByName("RateSel")));
     CPSW_TRY_CATCH(_destSel = IScalVal   ::create(_path->findByName("DestSel")));
