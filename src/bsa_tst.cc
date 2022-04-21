@@ -104,6 +104,7 @@ static void show_usage(const char* p)
   printf("         -D <begin,end>                  : fetch DRAM\n");
   printf("         -d <buffer>                     : write diagnostics to file and re-arm\n");
   printf("         -c <channel mask>               : bit mask of channels to dump\n");
+  printf("         -S <max segment size>           : set maximum segment size (bytes)\n");
 }
 
 int main(int argc, char* argv[])
@@ -122,6 +123,7 @@ int main(int argc, char* argv[])
   uint64_t begin=0,end=0;
   unsigned ndiag=0;
   unsigned channelMask = 0xffffffff;
+  uint16_t segmentSize = 0;
 
   bool lInit=false;
   bool lTPG =false;
@@ -130,7 +132,7 @@ int main(int argc, char* argv[])
 
   char* endPtr;
   int c;
-  while( (c=getopt(argc,argv,"a:c:d:i:g:f:y:D:F:GN"))!=-1 ) {
+  while( (c=getopt(argc,argv,"a:c:d:i:g:f:y:D:F:GNS:"))!=-1 ) {
     switch(c) {
     case 'a':
       ip = optarg; break;
@@ -179,6 +181,9 @@ int main(int argc, char* argv[])
     case 'N':
       lNoFetch = true;
       break;
+    case 'S':
+      segmentSize = strtoul(optarg,NULL,0);
+      break;
     default:
       show_usage(argv[0]);
       exit(1);
@@ -194,6 +199,16 @@ int main(int argc, char* argv[])
     }
     IYamlFixup* fixup = new IpAddrFixup(ip);
     Path path = IPath::loadYamlFile(yaml,"NetIODev",0,fixup);
+
+    if (segmentSize) {
+      uint16_t curSize(0),newSize(0),segSize(segmentSize);
+      Path segPath = path->findByName("mmio/AmcCarrierCore/SwRssiServer[1]/MaxSegSize");
+      IScalVal_RO::create( segPath )->getVal(reinterpret_cast<uint8_t*>(&curSize),2);
+      IScalVal   ::create( segPath )->setVal(reinterpret_cast<uint8_t*>(&segSize),2);
+      IScalVal_RO::create( segPath )->getVal(reinterpret_cast<uint8_t*>(&newSize),2);
+      printf("Segment Size 0x%x -> 0x%x (0x%x)\n", curSize, newSize, segSize);
+    }
+
     Bsa::AmcCarrierYaml hw(path->findByName(reg_path),
                            path->findByName(ram_path));
 
@@ -300,7 +315,7 @@ int main(int argc, char* argv[])
       double dt = double(end_time.tv_sec-begin_time.tv_sec) + 
         1.e-9*(double(end_time.tv_nsec)-double(begin_time.tv_nsec));
 
-      printf("Fetch %lx bytes in %f secs [%f MB/s]\n",
+      printf("Fetch 0x%lx bytes in %f secs [%f MB/s]\n",
              end-begin, dt, 1.e-6*double(end-begin)/dt);
 
       FILE* f = 0;
