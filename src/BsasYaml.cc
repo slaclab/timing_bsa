@@ -113,7 +113,7 @@ void BsasModuleYaml::SetChannelMask(int chn, uint32_t enable)
 
     CPSW_TRY_CATCH(_channelMask->getVal(&channelMask));
     channelMask &= ~((uint32_t(0x1)) << chn);
-    channelMask != ((uint32_t(enable?1:0)) << chn);
+    channelMask |= ((uint32_t(enable?1:0)) << chn);
     CPSW_TRY_CATCH(_channelMask->setVal(channelMask));
 }
 
