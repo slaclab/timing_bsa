@@ -15,6 +15,7 @@ namespace Bsas {
             BsasControlYaml(Path path);
             virtual ~BsasControlYaml() {}
 
+            void getCount(uint32_t *count);
             void Enable(uint32_t enable);
             void SetFixedRate(uint32_t rate);
             void SetACRate(uint32_t ts_mask, uint32_t rate);

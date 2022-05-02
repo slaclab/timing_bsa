@@ -27,6 +27,10 @@ BsasControlYaml::BsasControlYaml(Path path)
 
 }
 
+void BsasControlYaml::getCount(uint32_t *count)
+{
+    CPSW_TRY_CATCH(_count->getVal(count));
+}
 
 void BsasControlYaml::Enable(uint32_t enable)
 {
