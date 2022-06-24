@@ -1,3 +1,8 @@
+R2.0.0-2.0   06/23/2022  Matt Weaver 
+             - trap BSA buffer pointer error (to avoid ioc crash)
+               (remarks: this version is for BPM testing, we need to remove print statement
+                         in the sanity check for the buffer pointer error after the testing)
+
 R2.0.0-1.0   05/16/2022   Kukhee Kim
              - initial release for BSAS support
 
