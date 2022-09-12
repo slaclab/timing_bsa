@@ -1,3 +1,6 @@
+R2.1.0       09/12/2022  Dawood Alnajjar
+             - Merging R2.0.0-2.0 with master
+
 R2.0.0-2.0   06/23/2022  Matt Weaver 
              - trap BSA buffer pointer error (to avoid ioc crash)
                (remarks: this version is for BPM testing, we need to remove print statement
