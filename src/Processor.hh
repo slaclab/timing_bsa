@@ -56,10 +56,15 @@ namespace Bsa {
     //
     virtual unsigned array() const = 0;
     //
-    //
+    //  Clear array and start with new timestamp
     //
     virtual void reset(uint32_t sec,
                        uint32_t nsec) = 0;
+    //
+    //  Update timestamp
+    //
+    virtual void set(uint32_t sec,
+                     uint32_t nsec) = 0;
     //
     //
     //

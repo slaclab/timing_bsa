@@ -63,6 +63,12 @@ void     AmcCarrierBase::initialize()
   _memEnd = p;
 }
 
+void     AmcCarrierBase::ackClear  (unsigned array)
+{
+  uint32_t   uzro=0;
+  IndexRange rng(array);
+  _sClear->setVal(&uzro,1,&rng);
+}
 
 uint64_t AmcCarrierBase::inprogress() const
 {
@@ -111,6 +117,7 @@ ArrayState AmcCarrierBase::state   (unsigned array) const
   IndexRange rng(array);
   _tstamp->getVal(&s.timestamp,1,&rng);
   _wrAddr->getVal(&s.wrAddr   ,1,&rng);
+  _sClear->getVal(&s.clear    ,1,&rng);
   _sFull ->getVal(&s.wrap     ,1,&rng);
   return s;
 }
@@ -119,10 +126,13 @@ const std::vector<ArrayState>& AmcCarrierBase::state()
 {
   uint64_t tstamp[64];
   uint64_t wrAddr[64];
+  unsigned clear [64];
   _tstamp->getVal(tstamp,64);
+  _sClear->getVal(clear ,64);
   _wrAddr->getVal(wrAddr,64);
   for(unsigned i=0; i<64; i++) {
     _state[i].timestamp = tstamp[i];
+    _state[i].clear     = clear [i];
     _state[i].wrAddr    = wrAddr[i];
   }
 
@@ -186,6 +196,15 @@ Record*  AmcCarrierBase::get       (unsigned array,
 
     uint64_t last;
     _endAddr->getVal(&last,1,&rng);
+
+    if (end < start) {
+      //  This should never happen
+      printf("Trap BSA ptr error:  array %u  startAddr 0x%016llx  endAddr 0x%016llx  wrAddr 0x%016llx\n",
+             array, start, last, end);
+      record.entries.resize(0);
+      return &record;
+    }
+
     if (end > last)
       end = last;
 

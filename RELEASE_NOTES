@@ -1,3 +1,23 @@
+R2.0.0-2.0   06/23/2022  Matt Weaver 
+             - trap BSA buffer pointer error (to avoid ioc crash)
+               (remarks: this version is for BPM testing, we need to remove print statement
+                         in the sanity check for the buffer pointer error after the testing)
+
+R2.0.0-1.0   05/16/2022   Kukhee Kim
+             - initial release for BSAS support
+
+R2.0.0-prep-bsas    03/30/2022   Kukhee Kim
+             branched out from R2.0.0 to support BSAS
+
+             add API layer for BSAS
+             move BSSS severity filtering from firmware to software
+
+             merge last_timestamp branch to support incremental timestamp update during
+             the BSA acquistion is in progress
+             - commit: e9d37bf
+             - requirements: firmware update for timing-core (for each application)
+                             bsaDriver update - R2.1.0-prep-bsas branch or merged versio
+
 R2.0.0       12/02/2021   Kukhee Kim
              support Beam Synchronous Scalar Service (BSSSS)
              add verbosity option for un-necessary debugging messages

@@ -75,10 +75,12 @@ int ProcessorImpl::update(PvArray& array)
     current.nacq = _state[iarray].nacq;
 
     if (array.array() < BSA_FAULT_DIAG) {
-      if (current.timestamp != _state[iarray].timestamp) {
+      if (current.clear) {
         //
         //  New acquisition;  start from the beginning of the circular buffer
         //
+        _hw.ackClear(iarray);
+
         if(_debug) {
         printf("NEW TS [%u] [%u.%09u -> %u.%09u]\n",
                iarray,
@@ -96,6 +98,8 @@ int ProcessorImpl::update(PvArray& array)
         //
         //  Incremental update
         //
+        array.set(current.timestamp>>32,
+                  current.timestamp&0xffffffff);
         record = _hw.get(iarray,_state[iarray].next,&current.next);
       }
     }
@@ -103,6 +107,8 @@ int ProcessorImpl::update(PvArray& array)
       //
       //  For fault diagnostics, just replace the entire waveform with new data.
       //
+      array.reset(current.timestamp>>32,
+                  current.timestamp&0xffffffff);
       if (current.wrap)
         record = _hw.getRecord(iarray,current.wrAddr);
       else
