@@ -9,7 +9,7 @@
 #define NUM_BSSS_CHN   9
 
 namespace Bsss {
-    class BsssYaml : AcqService::AcqServiceYaml {
+    class BsssYaml : public AcqService::AcqServiceYaml {
         public:
             BsssYaml(Path bsss_path);
             virtual ~BsssYaml() {}
