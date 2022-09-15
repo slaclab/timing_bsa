@@ -9,7 +9,7 @@
 #define NUM_BLD_CHN   4
 
 namespace Bld {
-    class BldYaml : AcqService::AcqServiceYaml {
+    class BldYaml : public AcqService::AcqServiceYaml {
         public:
             BldYaml(Path bld_path);
             virtual ~BldYaml() {}

@@ -42,7 +42,7 @@ namespace AcqService {
             void setChannelMask(uint32_t enable);
             void setPacketSize(uint32_t size);
             void enablePacket(uint32_t enable);
-
+            uint32_t getEdefNum();
 
         protected:
             Path _path;

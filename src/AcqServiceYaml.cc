@@ -187,5 +187,10 @@ void AcqServiceYaml::enablePacket(uint32_t enable)
     CPSW_TRY_CATCH(_enable->setVal(enable?(uint32_t) 1: (uint32_t) 0));
 }
 
+uint32_t AcqServiceYaml::getEdefNum()
+{
+    return this->_edef_num;
+}
+
 
 
