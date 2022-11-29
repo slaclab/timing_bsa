@@ -197,10 +197,12 @@ Record*  AmcCarrierBase::get       (unsigned array,
     uint64_t last;
     _endAddr->getVal(&last,1,&rng);
 
-    if (end < start) {
-      //  This should never happen
-      printf("Trap BSA ptr error:  array %u  startAddr 0x%016llx  endAddr 0x%016llx  wrAddr 0x%016llx\n",
-             array, start, last, end);
+    if ((end & 0x7FF) || (end < start)) {
+      printf("Trap BSA ptr error:  array %u  startAddr 0x%016llx  endAddr 0x%016llx  wrAddr 0x%016llx  begin 0x%016llx.  Resetting\n",
+             array, start, last, end, begin);
+      uint32_t uzro=0,uone=1;
+      _sInit    ->setVal(&uone,1,&rng);
+      _sInit    ->setVal(&uzro,1,&rng);
       record.entries.resize(0);
       return &record;
     }
