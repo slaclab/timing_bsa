@@ -37,7 +37,7 @@ void     AmcCarrierBase::initialize()
   //  Setup the standard BSA arrays (32k entries)
   const uint64_t bsaSize = 3ULL<<7;  // one entry
   for(unsigned i=0; i<60; i++) {
-    pn = p+(1ULL<<15)*bsaSize;
+    pn = p+(1ULL<<12)*bsaSize;   // shrink to 4k entries for debugging purpose
     IndexRange rng(i);
     _startAddr->setVal(&p   ,1,&rng);
     _endAddr  ->setVal(&pn  ,1,&rng);
@@ -49,7 +49,7 @@ void     AmcCarrierBase::initialize()
   }
   //  Setup the fault arrays to be LARGER (1M entries)
   for(unsigned i=60; i<64; i++) {
-    pn = p+(1ULL<<20)*bsaSize;
+    pn = p+(1ULL<<18)*bsaSize;    // shrink to 256k entries for debugging purpose
     IndexRange rng(i);
     _startAddr->setVal(&p   ,1,&rng);
     _endAddr  ->setVal(&pn  ,1,&rng);
