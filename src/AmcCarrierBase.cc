@@ -2,6 +2,10 @@
 
 #include <stdio.h>
 
+extern "C" {
+int var_bsaTrap = 1;
+}
+
 using namespace Bsa;
 
 static uint64_t GET_U1(ScalVal_RO s, unsigned nelms)
@@ -199,8 +203,10 @@ Record*  AmcCarrierBase::get       (unsigned array,
 
     if (end < start) {
       //  This should never happen
-      printf("Trap BSA ptr error:  array %u  startAddr 0x%016llx  endAddr 0x%016llx  wrAddr 0x%016llx\n",
-             array, start, last, end);
+      if(var_bsaTrap) {
+          printf("Trap BSA ptr error:  array %u  startAddr 0x%016llx  endAddr 0x%016llx  wrAddr 0x%016llx\n",
+                 array, start, last, end);
+      }
       record.entries.resize(0);
       return &record;
     }
