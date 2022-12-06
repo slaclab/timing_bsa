@@ -1,3 +1,11 @@
+R2.2.0-BSSS_BSA_upgrade
+             12/06/2022  Kukhe Kim
+             - Branch out from R2.2.0 to implement new BSSS/BSA requirements
+                . BSSS supports all of the BSA system EDEFs
+                . BSSS EDEFs are controlled by BSA system EDEFFs
+                . BSSS/BLD packet structure change to support the extended number of BSSS
+
+
 R2.2.0       09/29/2022  Dawood Alnajjar
              - Refactored BsssYaml
              - Added BLD service support
