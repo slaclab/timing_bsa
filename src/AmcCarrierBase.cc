@@ -4,6 +4,12 @@
 
 using namespace Bsa;
 
+#define NBSAARRAYS 60
+#define HSTARRAY0  60
+#define HSTARRAYN  64
+#define BURSTSIZE 0x800
+#define DBUG
+
 static uint64_t GET_U1(ScalVal_RO s, unsigned nelms)
 {
   uint64_t r=0;
@@ -17,46 +23,55 @@ static uint64_t GET_U1(ScalVal_RO s, unsigned nelms)
   return r;
 }
 
-AmcCarrierBase::AmcCarrierBase() : _state(64)
+AmcCarrierBase::AmcCarrierBase() : _state(HSTARRAYN)
 {
 }
 
 void     AmcCarrierBase::initialize()
 {
-  uint64_t p=0,pn=0;
+  uint64_t p=0,pn=0,pe=0;
   uint32_t uzro=0,uone=1;
 
-#if 0
-  for(unsigned i=0; i<64; i++) {
-    IndexRange rng(i);
-    _sEnabled ->setVal(&uzro,1,&rng);
-  }
-  usleep(1);
-#endif
-
   //  Setup the standard BSA arrays (32k entries)
+  //  Must be a multiple of bsaSize and burstSize(2kB)
   const uint64_t bsaSize = 3ULL<<7;  // one entry
-  for(unsigned i=0; i<60; i++) {
+  for(unsigned i=0; i<NBSAARRAYS; i++) {
+#ifdef DBUG
+    pn = p+(1ULL<<8)*bsaSize;
+#else
     pn = p+(1ULL<<15)*bsaSize;
+#endif
+    //    pe = pn - BURSTSIZE;
+    pe = pn;
     IndexRange rng(i);
     _startAddr->setVal(&p   ,1,&rng);
-    _endAddr  ->setVal(&pn  ,1,&rng);
+    _endAddr  ->setVal(&pe  ,1,&rng);
     _sEnabled ->setVal(&uone,1,&rng);
     _sMode    ->setVal(&uzro,1,&rng);
     _sInit    ->setVal(&uone,1,&rng);
     _sInit    ->setVal(&uzro,1,&rng);
+#ifdef DBUG
+    printf("DBUG:  array %u  startAddr 0x%016llx  endAddr 0x%016llx\n",
+           i, p, pe);
+#endif
     p = pn;
   }
   //  Setup the fault arrays to be LARGER (1M entries)
-  for(unsigned i=60; i<64; i++) {
+  for(unsigned i=HSTARRAY0; i<HSTARRAYN; i++) {
     pn = p+(1ULL<<20)*bsaSize;
+    //    pe = pn - BURSTSIZE;
+    pe = pn;
     IndexRange rng(i);
     _startAddr->setVal(&p   ,1,&rng);
-    _endAddr  ->setVal(&pn  ,1,&rng);
+    _endAddr  ->setVal(&pe  ,1,&rng);
     _sEnabled ->setVal(&uone,1,&rng);
     _sMode    ->setVal(&uzro,1,&rng);
     _sInit    ->setVal(&uone,1,&rng);
     _sInit    ->setVal(&uzro,1,&rng);
+#ifdef DBUG
+    printf("DBUG:  array %u  startAddr 0x%016llx  endAddr 0x%016llx\n",
+           i, p, pe);
+#endif
     p = pn;
   }
 
@@ -74,8 +89,8 @@ uint64_t AmcCarrierBase::inprogress() const
 {
   uint64_t r=0;
   unsigned v[64];
-  _sEmpt->getVal(v,64);
-  for(unsigned i=0; i<64; i++) {
+  _sEmpt->getVal(v,HSTARRAYN);
+  for(unsigned i=0; i<HSTARRAYN; i++) {
     if (!v[i])
       r |= 1ULL<<i;
   }
@@ -85,10 +100,10 @@ uint64_t AmcCarrierBase::inprogress() const
 uint64_t AmcCarrierBase::done      () const
 {
   uint64_t r=0;
-  uint32_t v[64];
-  memset(v,0,64*sizeof(uint32_t));
-  _sStatus->getVal(v,64);
-  for(unsigned i=0; i<64; i++) {
+  uint32_t v[HSTARRAYN];
+  memset(v,0,HSTARRAYN*sizeof(uint32_t));
+  _sStatus->getVal(v,HSTARRAYN);
+  for(unsigned i=0; i<HSTARRAYN; i++) {
     if (v[i]&4)
       r |= 1ULL<<i;
   }
@@ -124,20 +139,20 @@ ArrayState AmcCarrierBase::state   (unsigned array) const
 
 const std::vector<ArrayState>& AmcCarrierBase::state()
 {
-  uint64_t tstamp[64];
-  uint64_t wrAddr[64];
-  unsigned clear [64];
-  _tstamp->getVal(tstamp,64);
-  _sClear->getVal(clear ,64);
-  _wrAddr->getVal(wrAddr,64);
-  for(unsigned i=0; i<64; i++) {
+  uint64_t tstamp[HSTARRAYN];
+  uint64_t wrAddr[HSTARRAYN];
+  unsigned clear [HSTARRAYN];
+  _tstamp->getVal(tstamp,HSTARRAYN);
+  _sClear->getVal(clear ,HSTARRAYN);
+  _wrAddr->getVal(wrAddr,HSTARRAYN);
+  for(unsigned i=0; i<HSTARRAYN; i++) {
     _state[i].timestamp = tstamp[i];
     _state[i].clear     = clear [i];
     _state[i].wrAddr    = wrAddr[i];
   }
 
 #if 0
-  for(unsigned i=0; i<64; i++)
+  for(unsigned i=0; i<HSTARRAYN; i++)
     printf("state [%u] %llx %llx\n",
            i, tstamp[i], wrAddr[i]);
 #endif
@@ -197,30 +212,36 @@ Record*  AmcCarrierBase::get       (unsigned array,
     uint64_t last;
     _endAddr->getVal(&last,1,&rng);
 
-    if (end < start) {
-      //  This should never happen
-      printf("Trap BSA ptr error:  array %u  startAddr 0x%016llx  endAddr 0x%016llx  wrAddr 0x%016llx\n",
-             array, start, last, end);
+
+#ifdef DBUG
+    printf("DBUG:  array %u  done %u  startAddr 0x%016llx  endAddr 0x%016llx  wrAddr 0x%016llx  begin 0x%016llx\n",
+           array, status(array), start, last, end, begin);
+#endif
+
+    if (end < start or end > last) {
+      printf("Trap BSA ptr error:  array %u  startAddr 0x%016llx  endAddr 0x%016llx  wrAddr 0x%016llx  begin 0x%016llx.  Resetting\n",
+             array, start, last, end, begin);
+      uint32_t uzro=0,uone=1;
+      _sInit    ->setVal(&uone,1,&rng);
+      _sInit    ->setVal(&uzro,1,&rng);
       record.entries.resize(0);
       return &record;
     }
 
-    if (end > last)
-      end = last;
 
     if (begin > last)
       begin = last;
 
     _sFull->getVal(&wrap     ,1,&rng);
     if (end <= begin && wrap) {
-      unsigned tail_entries = (last-begin)/sizeof(Entry);
-      unsigned head_entries = (end -start)/sizeof(Entry);
-      end = start + head_entries*sizeof(Entry);
-      record.entries.resize( tail_entries + head_entries );
+      uint64_t nb      = last-begin+end-start;
+      unsigned entries = nb/sizeof(Entry);
+      end += sizeof(Entry)*entries - nb;
+      record.entries.resize( entries );
       _fill( record.entries.data(), 
              begin, 
              last );
-      _fill( record.entries.data()+tail_entries, 
+      _fill( reinterpret_cast<uint8_t*>(record.entries.data())+int(last-begin),
              start, 
              end );
     }

@@ -82,12 +82,12 @@ int ProcessorImpl::update(PvArray& array)
         _hw.ackClear(iarray);
 
         if(_debug) {
-        printf("NEW TS [%u] [%u.%09u -> %u.%09u]\n",
-               iarray,
-               _state[iarray].timestamp>>32,
-               _state[iarray].timestamp&0xffffffff,
-               current.timestamp>>32,
-               current.timestamp&0xffffffff);
+          printf("NEW TS [%u] [%u.%09u -> %u.%09u]\n",
+                 iarray,
+                 _state[iarray].timestamp>>32,
+                 _state[iarray].timestamp&0xffffffff,
+                 current.timestamp>>32,
+                 current.timestamp&0xffffffff);
         }
         array.reset(current.timestamp>>32,
                     current.timestamp&0xffffffff);

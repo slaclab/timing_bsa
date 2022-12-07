@@ -120,7 +120,8 @@ public:
     for(unsigned i=2; i<pid.size(); i++) {
       uint64_t next = pidl+dpid;
       if (next != pid[i]) {
-        printf("***** PID[%d] = %016llx [%016llx]\n",i,pid[i],next);
+        printf("***** PID[%d] = %016llx [%016llx] [%lld %lld]\n",
+               i,pid[i],next,int64_t(pid[i]-next),dpid);
         if (nerr++ > 4)
           break;
       }
@@ -129,8 +130,9 @@ public:
     }
     //    return;
 
+    if (false)
     {
-      unsigned n = _v.size() < 50 ? _v.size() : 50;
+      unsigned n = _v.size() < 10 ? _v.size() : 10;
       unsigned n0 = _v.size() - n;
       for(unsigned i=n0; i<_v.size(); i++) {
         const PVData& v = _v[i];
@@ -284,10 +286,10 @@ int main(int argc, char* argv[])
     Path path_ram(path->findByName(ram_path));
     p = Bsa::Processor::create(path_reg,
                                path_ram,
-                               false);
+                               lInit);
   }
   else {
-    p = Bsa::Processor::create(ip,false,lDebug);
+    p = Bsa::Processor::create(ip,lInit,lDebug);
   }
 
   //  ::signal( SIGINT, sigHandler );
