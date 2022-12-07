@@ -4,6 +4,7 @@ R2.2.0-BSSS_BSA_upgrade
                 . BSSS supports all of the BSA system EDEFs
                 . BSSS EDEFs are controlled by BSA system EDEFFs
                 . BSSS/BLD packet structure change to support the extended number of BSSS
+              - merge last_timestamp branch for BSA write-pointer issue
 
 
 R2.2.0       09/29/2022  Dawood Alnajjar
