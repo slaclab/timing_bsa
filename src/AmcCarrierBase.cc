@@ -8,7 +8,7 @@ using namespace Bsa;
 #define HSTARRAY0  60
 #define HSTARRAYN  64
 #define BURSTSIZE 0x800
-//#define DBUG
+#define DBUG
 
 static uint64_t GET_U1(ScalVal_RO s, unsigned nelms)
 {
@@ -41,7 +41,8 @@ void     AmcCarrierBase::initialize()
 #else
     pn = p+(1ULL<<15)*bsaSize;
 #endif
-    pe = pn - BURSTSIZE;
+    //    pe = pn - BURSTSIZE;
+    pe = pn;
     IndexRange rng(i);
     _startAddr->setVal(&p   ,1,&rng);
     _endAddr  ->setVal(&pe  ,1,&rng);
@@ -58,7 +59,8 @@ void     AmcCarrierBase::initialize()
   //  Setup the fault arrays to be LARGER (1M entries)
   for(unsigned i=HSTARRAY0; i<HSTARRAYN; i++) {
     pn = p+(1ULL<<20)*bsaSize;
-    pe = pn - BURSTSIZE;
+    //    pe = pn - BURSTSIZE;
+    pe = pn;
     IndexRange rng(i);
     _startAddr->setVal(&p   ,1,&rng);
     _endAddr  ->setVal(&pe  ,1,&rng);
@@ -192,7 +194,7 @@ Record*  AmcCarrierBase::get       (unsigned array,
   Record& record = *new Record;
   record.buffer = array;
 
-  uint64_t start=0,end=0,trig=0;
+  uint64_t start=0,end=0;
   unsigned wrap=0;
   {
     uint64_t v;
@@ -210,14 +212,12 @@ Record*  AmcCarrierBase::get       (unsigned array,
     uint64_t last;
     _endAddr->getVal(&last,1,&rng);
 
-    _trAddr->getVal(&trig,1,&rng);
-
 #ifdef DBUG
-      printf("DBUG:  array %u  done %u  startAddr 0x%016llx  endAddr 0x%016llx  wrAddr 0x%016llx  begin 0x%016llx  trig 0x%016llx\n",
-             array, status(array), start, last, end, begin, trig);
+    printf("DBUG:  array %u  done %u  startAddr 0x%016llx  endAddr 0x%016llx  wrAddr 0x%016llx  begin 0x%016llx\n",
+           array, status(array), start, last, end, begin);
 #endif
 
-    if (end < start or end > (last+BURSTSIZE)) {
+    if (end < start or end > last) {
       printf("Trap BSA ptr error:  array %u  startAddr 0x%016llx  endAddr 0x%016llx  wrAddr 0x%016llx  begin 0x%016llx.  Resetting\n",
              array, start, last, end, begin);
       uint32_t uzro=0,uone=1;
@@ -232,12 +232,14 @@ Record*  AmcCarrierBase::get       (unsigned array,
 
     _sFull->getVal(&wrap     ,1,&rng);
     if (end <= begin && wrap) {
-      unsigned entries = (trig-begin+end-start)/sizeof(Entry);
+      uint64_t nb      = last-begin+end-start;
+      unsigned entries = nb/sizeof(Entry);
+      end += sizeof(Entry)*entries - nb;
       record.entries.resize( entries );
       _fill( record.entries.data(), 
              begin, 
-             trig );
-      _fill( reinterpret_cast<uint8_t*>(record.entries.data())+int(trig-begin),
+             last );
+      _fill( reinterpret_cast<uint8_t*>(record.entries.data())+int(last-begin),
              start, 
              end );
     }
