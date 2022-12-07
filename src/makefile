@@ -1,7 +1,7 @@
 #
 # Disable CCACHE
 CCACHE_DISABLE=1
-#LDFLAGS += -Wl,-Bstatic -static-libgcc
+LDFLAGS += -Wl,-Bstatic -static-libgcc
 #LDFLAGS += -Wl,-Bstatic
 #
 CPSW_DIR=/afs/slac/g/lcls/package/cpsw/framework/R4.4.1/src
@@ -50,5 +50,7 @@ PROGRAMS    += bld_control
 tpr_stream_SRCS = tpr_stream.cc
 tpr_stream_LIBS = $(CPSW_LIBS)
 PROGRAMS    += tpr_stream
+
+PROGRAMS = bsaapp_tst
 
 include $(CPSW_DIR)/rules.mak
