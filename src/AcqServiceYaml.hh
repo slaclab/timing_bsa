@@ -8,9 +8,11 @@
 #define MAX_EDEFS 16
 
 namespace AcqService {
+typedef enum {bld = 0, bsss} serviceType_t;
+
     class AcqServiceYaml {
         protected:
-            AcqServiceYaml(Path path, uint32_t edefs );
+            AcqServiceYaml(Path path, uint32_t edefs, serviceType_t type);
         public:
             virtual ~AcqServiceYaml() {}
 
@@ -32,7 +34,8 @@ namespace AcqService {
             void setFixedRate(int chn, uint32_t rate);
             void setACRate(int chn, uint32_t ts_mask, uint32_t rate);
             void setSeqRate(int chn, uint32_t seq_num, uint32_t seq_bit);
-            void setRateLimit(int chn, uint32_t rate_limit);
+            void setRateLimit(int chn, uint32_t rate_limit);      // for BLD, per edef channel
+            void setRateLimit(uint32_t rate_limit);               // for BSSS, per module
             void setEdefEnable(int chn, uint32_t enable);
 
             // channel number correspnds to the BSSS data channels
@@ -68,6 +71,10 @@ namespace AcqService {
             ScalVal _EdefRateLimit[MAX_EDEFS];    // rate limit
             ScalVal _EdefRateSel[MAX_EDEFS];      // rate select
             ScalVal _EdefDestSel[MAX_EDEFS];      // destination select
+
+
+        private:
+           serviceType_t _type;
 
     }; /* class AcqServiceYaml */
 
