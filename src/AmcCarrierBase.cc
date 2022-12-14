@@ -8,7 +8,7 @@ using namespace Bsa;
 #define HSTARRAY0  60
 #define HSTARRAYN  64
 #define BURSTSIZE 0x800
-#define DBUG
+// #define DBUG
 
 static uint64_t GET_U1(ScalVal_RO s, unsigned nelms)
 {
