@@ -1,3 +1,10 @@
+R2.2.0-0.1   12/14/2022  Kukhee Kim
+              - first test-ready version of BSSS_BSA_upgrade
+
+R2.2.0-0.0   12/06/2022  Kukhee Kim
+             - anchor for BSSS_BSA_upgrade
+             - merge last_timestamp branch
+
 R2.2.0-BSSS_BSA_upgrade
              12/06/2022  Kukhe Kim
              - Branch out from R2.2.0 to implement new BSSS/BSA requirements
