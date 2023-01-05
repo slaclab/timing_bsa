@@ -1,14 +1,12 @@
 #include "AmcCarrierBase.hh"
+#include "BsaDefs.hh"
 
 #include <stdio.h>
 
 using namespace Bsa;
 
-#define NBSAARRAYS 60
-#define HSTARRAY0  60
-#define HSTARRAYN  64
-#define BURSTSIZE 0x800
-// #define DBUG
+//#define BURSTSIZE 0x800
+//#define DBUG
 
 static uint64_t GET_U1(ScalVal_RO s, unsigned nelms)
 {
@@ -76,6 +74,14 @@ void     AmcCarrierBase::initialize()
   }
 
   _memEnd = p;
+}
+
+void     AmcCarrierBase::reset     (unsigned array)
+{
+  IndexRange rng(array);
+  uint32_t uzro=0,uone=1;
+  _sInit    ->setVal(&uone,1,&rng);
+  _sInit    ->setVal(&uzro,1,&rng);
 }
 
 void     AmcCarrierBase::ackClear  (unsigned array)

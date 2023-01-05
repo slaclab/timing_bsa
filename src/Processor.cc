@@ -1,6 +1,7 @@
 #include "Processor.hh"
 #include "AmcCarrier.hh"
 #include "AmcCarrierYaml.hh"
+#include "BsaDefs.hh"
 
 #include <stdio.h>
 
@@ -24,14 +25,12 @@ namespace Bsa {
     AmcCarrierBase *getHardware();
   private:
     AmcCarrierBase& _hw;
-    ArrayState  _state[64];
+    ArrayState  _state[HSTARRAYN];
     bool        _debug;
   };
 };
 
 using namespace Bsa;
-
-enum { BSA_FAULT_DIAG = 60 };
 
 AmcCarrierBase *ProcessorImpl::getHardware()
 {
@@ -43,12 +42,12 @@ uint64_t ProcessorImpl::pending()
   const std::vector<ArrayState>& s = _hw.state();
 
   uint64_t r = 0;
-  for(unsigned i=0; i<64; i++)
+  for(unsigned i=0; i<HSTARRAYN; i++)
     if (s[i] != _state[i])
       r |= 1ULL<<i;
 
   uint64_t done = _hw.done();
-  done |= (1ULL<<60)-1;
+  done |= (1ULL<<HSTARRAY0)-1;
 
   r &= done;
 
@@ -66,7 +65,7 @@ int ProcessorImpl::update(PvArray& array)
     //
     //  Fault diagnostics are large and should only be accessed when latched
     //
-    if (array.array() >= BSA_FAULT_DIAG &&
+    if (array.array() >= HSTARRAY0 &&
         !_hw.done(array.array()))
       return 0;
 
@@ -74,7 +73,7 @@ int ProcessorImpl::update(PvArray& array)
 
     current.nacq = _state[iarray].nacq;
 
-    if (array.array() < BSA_FAULT_DIAG) {
+    if (array.array() < HSTARRAY0) {
       if (current.clear) {
         //
         //  New acquisition;  start from the beginning of the circular buffer
@@ -113,6 +112,13 @@ int ProcessorImpl::update(PvArray& array)
         record = _hw.getRecord(iarray,current.wrAddr);
       else
         record = _hw.getRecord(iarray);
+
+      //
+      //  Clear the done flag
+      //  Works only for the fault history buffers, since they don't
+      //  have incremental updates.
+      //
+      _hw.reset(iarray);
     }
 
     if (_debug) {

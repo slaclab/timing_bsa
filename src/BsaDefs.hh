@@ -5,6 +5,11 @@
 #include <vector>
 
 namespace Bsa {
+
+  enum { NBSAARRAYS =44 };
+  enum { HSTARRAY0  =44 };
+  enum { HSTARRAYN  =48 };
+
   class ChannelData {
   public:
     //  Arithmetic exception during accumulation

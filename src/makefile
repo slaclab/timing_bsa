@@ -51,6 +51,8 @@ tpr_stream_SRCS = tpr_stream.cc
 tpr_stream_LIBS = $(CPSW_LIBS)
 PROGRAMS    += tpr_stream
 
-PROGRAMS = bsaapp_tst
+bsapeek_SRCS = bsapeek.cc
+bsapeek_LIBS = bsa $(CPSW_LIBS)
+PROGRAMS     = bsapeek
 
 include $(CPSW_DIR)/rules.mak

@@ -24,6 +24,7 @@ namespace Bsa {
                         uint64_t end) const;
   public:
     void     initialize();
+    void     reset     (unsigned array);
     void     ackClear  (unsigned array);
     uint64_t inprogress() const;
     uint64_t done      () const;
