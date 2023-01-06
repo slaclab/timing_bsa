@@ -69,7 +69,7 @@ AmcCarrierYaml::~AmcCarrierYaml()
 }
 
 unsigned AmcCarrierYaml::nArrays   () const
-{ return 64; }
+{ return 48; }
 
 uint32_t AmcCarrierYaml::doneRaw   () const
 {
