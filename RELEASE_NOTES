@@ -1,3 +1,7 @@
+R2.2.0-0.2   01/13/2023  Kukhee Kim
+              - Add throttled reader for fault buffer readout.  Buffer readouts are queued in the order seen by the thread.
+              - adjust number of Edefs to 48
+
 R2.2.0-0.1   12/14/2022  Kukhee Kim
               - first test-ready version of BSSS_BSA_upgrade
 
