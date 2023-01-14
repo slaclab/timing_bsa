@@ -26,6 +26,8 @@
 #include <cpsw_yaml_keydefs.h>
 #include <cpsw_yaml.h>
 
+#define DBUG
+
 static void sigHandler( int signal ) {
   Bsa::AmcCarrier::instance()->dump();
   ::exit(signal);
@@ -114,8 +116,10 @@ public:
 
     unsigned nerr=0;
 
+#if 0
     printf("-- Array[%02u]:%20.20s [%u.%09u] [%u] [%016llx,%llu]--\n",
            _a, _f.c_str(), _ts_sec, _ts_nsec, pid.size(), pid0, dpid);
+#endif
 
     for(unsigned i=2; i<pid.size(); i++) {
       uint64_t next = pidl+dpid;
@@ -299,7 +303,7 @@ int main(int argc, char* argv[])
   //
   while(1) {
 
-#if 0
+#ifdef DBUG
     timespec ts_begin,ts_end;
     clock_gettime(CLOCK_REALTIME,&ts_begin);
 #endif
@@ -315,14 +319,16 @@ int main(int argc, char* argv[])
         for(unsigned i=0; i<pvs.size(); i++)
           pvs[i]->flush();
       }
+      else {
+      }
     }
-#if 0
-      clock_gettime(CLOCK_REALTIME,&ts_end);
-      printf("\rpending [%016llx] array update = %f sec",
-             pending,
-             double(ts_end.tv_sec-ts_begin.tv_sec)+
-             1.e-9*(double(ts_end.tv_nsec)-double(ts_begin.tv_nsec)));
-      fflush(stdout);
+#ifdef DBUG
+    clock_gettime(CLOCK_REALTIME,&ts_end);
+    printf("\rpending [%016llx] array update = %f sec",
+           pending,
+           double(ts_end.tv_sec-ts_begin.tv_sec)+
+           1.e-9*(double(ts_end.tv_nsec)-double(ts_begin.tv_nsec)));
+    fflush(stdout);
 #endif
 
     usleep(uinterval);

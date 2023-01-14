@@ -3,9 +3,83 @@
 #include "AmcCarrierYaml.hh"
 #include "BsaDefs.hh"
 
+#include <cpsw_api_builder.h>
+
+#include <queue>
 #include <stdio.h>
 
+static unsigned _nReadout = 1024;
+
 namespace Bsa {
+
+  class Reader {
+  public:
+    static void     set_nReadout(unsigned v) {_nReadout=v;} 
+    static unsigned get_nReadout() { return _nReadout;}
+  public:
+    Reader() : _timestamp(0), _next(0), _last(0), _end(0) {}
+    ~Reader() {}
+  public:
+    bool     done () const { return _next==_last; }
+    void     reset(PvArray&              array, 
+                   const ArrayState&     state,
+                   AmcCarrierBase&       hw, 
+                   uint64_t              timestamp)
+    {
+      unsigned iarray = array.array();
+      IndexRange rng(iarray);
+      uint64_t start,end;
+      hw._startAddr->getVal(&start,1,&rng);
+      hw._endAddr  ->getVal(&end  ,1,&rng);
+
+      _timestamp = state.timestamp;
+      _next = state.wrap ? state.wrAddr : start;
+      _last = state.wrAddr;
+      _end  = end;
+
+      array.reset(timestamp>>32,timestamp&0xffffffff);
+    }
+    Record* next(PvArray& array, AmcCarrierBase& hw)
+    {
+      unsigned n = _nReadout;
+      //  _next : start of current read
+      //  _last : end of final read
+      //  _end  : end of buffer where we need to wrap
+      uint64_t next = _next + n*sizeof(Entry);  // end of current read
+      uint64_t nnext = next;                    // start of next read
+
+      if (next > _end) {  // truncate at the wrap point
+        next = _end;
+        n = (next - _next) / sizeof(Entry);
+        IndexRange rng(array.array());
+        hw._startAddr->getVal(&nnext,1,&rng);
+      }
+      else if (_next < _last && _last < next) {  // truncate to _last
+        n = (_last - _next) / sizeof(Entry);
+        nnext = _last;
+        next  = _last;
+      }
+
+      Record* record = new Record;
+      record->entries.resize(n);
+
+      hw._fill(record->entries.data(), _next, next);
+      _next = nnext;
+
+      if (done()) {
+        hw   .reset(array.array());
+        array.set(_timestamp>>32, _timestamp&0xffffffff);
+      }
+
+      return record;
+    }
+  private:
+    uint64_t _timestamp;
+    uint64_t _next;
+    uint64_t _last;
+    uint64_t _end;
+  };
+
   class ProcessorImpl : public Processor {
   public:
     ProcessorImpl(Path reg,
@@ -24,10 +98,13 @@ namespace Bsa {
     int      update(PvArray&);
     AmcCarrierBase *getHardware();
   private:
-    AmcCarrierBase& _hw;
-    ArrayState  _state[HSTARRAYN];
-    bool        _debug;
+    AmcCarrierBase&      _hw;
+    ArrayState           _state [HSTARRAYN];
+    Reader               _reader[HSTARRAYN-HSTARRAY0];
+    std::queue<unsigned> _readerQueue;
+    bool                 _debug;
   };
+
 };
 
 using namespace Bsa;
@@ -42,13 +119,14 @@ uint64_t ProcessorImpl::pending()
   const std::vector<ArrayState>& s = _hw.state();
 
   uint64_t r = 0;
-  for(unsigned i=0; i<HSTARRAYN; i++)
+  for(unsigned i=0; i<HSTARRAY0; i++)
     if (s[i] != _state[i])
       r |= 1ULL<<i;
 
+  r |= ~((1ULL<<HSTARRAY0)-1);
+
   uint64_t done = _hw.done();
   done |= (1ULL<<HSTARRAY0)-1;
-
   r &= done;
 
   return r;
@@ -60,20 +138,18 @@ int ProcessorImpl::update(PvArray& array)
   std::vector<Pv*> pvs = array.pvs();
   ArrayState current(_hw.state(iarray));
 
-  if (current != _state[iarray]) {
+#if 0
+  printf("current[%d]: wrAddr %016llx  next %016llx  clear %u  wrap %u  nacq %u\n",
+         iarray,current.wrAddr,current.next,current.clear,current.wrap,current.nacq);
+  printf("state  [%d]: wrAddr %016llx  next %016llx  clear %u  wrap %u  nacq %u\n",
+         iarray,_state[iarray].wrAddr,_state[iarray].next,_state[iarray].clear,_state[iarray].wrap,_state[iarray].nacq);
+#endif
 
-    //
-    //  Fault diagnostics are large and should only be accessed when latched
-    //
-    if (array.array() >= HSTARRAY0 &&
-        !_hw.done(array.array()))
-      return 0;
+  Record* record;
 
-    Record* record;
-
-    current.nacq = _state[iarray].nacq;
-
-    if (array.array() < HSTARRAY0) {
+  if (array.array() < HSTARRAY0) {
+    if (current != _state[iarray]) {
+      current.nacq = _state[iarray].nacq;
       if (current.clear) {
         //
         //  New acquisition;  start from the beginning of the circular buffer
@@ -101,73 +177,48 @@ int ProcessorImpl::update(PvArray& array)
                   current.timestamp&0xffffffff);
         record = _hw.get(iarray,_state[iarray].next,&current.next);
       }
-    }
-    else {
-      //
-      //  For fault diagnostics, just replace the entire waveform with new data.
-      //
-      array.reset(current.timestamp>>32,
-                  current.timestamp&0xffffffff);
-      if (current.wrap)
-        record = _hw.getRecord(iarray,current.wrAddr);
-      else
-        record = _hw.getRecord(iarray);
 
-      //
-      //  Clear the done flag
-      //  Works only for the fault history buffers, since they don't
-      //  have incremental updates.
-      //
-      _hw.reset(iarray);
     }
-
-    if (_debug) {
-      printf("Record [%p]:  buffer [%u], time %u.%09u  entries [%u]\n",
-             record, record->buffer, record->time_secs, record->time_nsecs, record->entries.size());
-#if 0
-      printf("%16.16s %8.8s %26.26s %26.26s\n",
-             "PulseID","Channels","Channel0","Channel1");
-      for(unsigned i=0; i<record->entries.size(); i++) {
-        printf("%016llx %08x %08x:%08x:%08x %08x:%08x:%08x\n",
-               record->entries[i].pulseId(),
-               record->entries[i].nchannels(),
-               record->entries[i].channel_data[0].data[0],
-               record->entries[i].channel_data[0].data[1],
-               record->entries[i].channel_data[0].data[2],
-               record->entries[i].channel_data[1].data[0],
-               record->entries[i].channel_data[1].data[1],
-               record->entries[i].channel_data[1].data[2]);
+  }
+  else {  // >= HSTARRAY0
+    unsigned ifltb = array.array()-HSTARRAY0;
+    if (_readerQueue.empty()) {
+      _readerQueue.push(ifltb);
+      record = new Record;
+    }
+    else if (_readerQueue.front()==ifltb) {
+      Reader& reader = _reader[ifltb];
+      if (reader.done()) {
+        //  A new fault was latched
+        current.nacq = 0;
+        reader.reset(array,current,_hw,current.timestamp-(1ULL<<32));
+        record = reader.next(array,_hw);
       }
-#else
-      for(unsigned i=0; i<record->entries.size(); i++) {
-        printf("Hdr: %016llx %08x\n", 
-               record->entries[i].pulseId(), 
-               record->entries[i].nchannels());
-        for(unsigned j=0; j<31; j++) {
-          printf(" %08x:%08x:%08x",
-                 record->entries[i].channel_data[j].data[0],
-                 record->entries[i].channel_data[j].data[1],
-                 record->entries[i].channel_data[j].data[2]);
-        }
-        printf("\n");
+      else {
+        //  A previous fault readout is in progress
+        record = reader.next(array,_hw);
       }
-#endif
-    }
 
-    for(unsigned i=0; i<record->entries.size(); i++) {
-      const Entry& entry = record->entries[i];
-      //  fill pulseid waveform
-      array.append(entry.pulseId());
-      //  fill channel data waveforms
-      for(unsigned j=0; j<pvs.size(); j++)
-        pvs[j]->append(entry.channel_data[j].n(),
-                       entry.channel_data[j].mean(),
-                       entry.channel_data[j].rms2());
+      if (reader.done())
+        _readerQueue.pop();
     }
-    current.nacq += record->entries.size(); 
-    delete record;
+    else {  // Some other fault buffer readout is in progress
+      record = new Record;
+    }
   }
 
+  for(unsigned i=0; i<record->entries.size(); i++) {
+    const Entry& entry = record->entries[i];
+    //  fill pulseid waveform
+    array.append(entry.pulseId());
+    //  fill channel data waveforms
+    for(unsigned j=0; j<pvs.size(); j++)
+      pvs[j]->append(entry.channel_data[j].n(),
+                     entry.channel_data[j].mean(),
+                     entry.channel_data[j].rms2());
+  }
+  current.nacq += record->entries.size();
+  delete record;
   _state[iarray] = current;
   return current.nacq;
 }

@@ -71,6 +71,8 @@ namespace Bsa {
     ScalVal_RO _trAddr;
     ScalVal_RO _dram;
     uint64_t   _memEnd;
+
+    friend class Reader;
   };
 };
 
