@@ -8,7 +8,7 @@
 #include <queue>
 #include <stdio.h>
 
-static unsigned _nReadout = 1024;
+static unsigned _nReadout = 1024 * 128;
 
 namespace Bsa {
 
