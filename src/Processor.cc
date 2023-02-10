@@ -208,15 +208,26 @@ int ProcessorImpl::update(PvArray& array)
   }
 
   for(unsigned i=0; i<record->entries.size(); i++) {
+    // Process next entry (i.e. pulse ID)
     const Entry& entry = record->entries[i];
-    //  fill pulseid waveform
+
+    //  Fill pulseid waveform
     array.append(entry.pulseId());
-    //  fill channel data waveforms
-    for(unsigned j=0; j<pvs.size(); j++)
-      pvs[j]->append(entry.channel_data[j].n(),
-                     entry.channel_data[j].mean(),
-                     entry.channel_data[j].rms2());
+
+    //  Fill channel data waveforms
+    for(unsigned j=0; j<numChannelData; j++)
+    {
+      // Adding new call to procChannelData() here that will do the partitioning of the channel data.
+      // Two new parameters are passed: the number of user-defined BSA channels (i.e. pvs.size())
+      // and a boolean to indicate if we are done sending all the channel data for the current pulse. 
+      // Note the data are sent as 32-bit chunks and those are splitted as needed in the Asyn driver.
+      array.procChannelData(entry.channel_data[j].n(),
+                            entry.channel_data[j].mean(),
+                            entry.channel_data[j].rms2(),
+                            (j == (numChannelData - 1) || j == (pvs.size() - 1)));
+    }
   }
+
   current.nacq += record->entries.size();
   delete record;
   _state[iarray] = current;

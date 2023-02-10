@@ -10,6 +10,8 @@ namespace Bsa {
   enum { HSTARRAY0  =44 };
   enum { HSTARRAYN  =48 };
 
+  const int numChannelData = 31;
+
   class ChannelData {
   public:
     //  Arithmetic exception during accumulation
@@ -31,7 +33,7 @@ namespace Bsa {
   private:
     uint32_t  data[3];
   public:
-    ChannelData channel_data[31];
+    ChannelData channel_data[numChannelData];
   };
 
   class Record {

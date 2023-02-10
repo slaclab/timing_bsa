@@ -10,6 +10,16 @@
 #include <cpsw_api_user.h>
 
 namespace Bsa {
+  typedef enum {
+    uint2,
+    int16,
+    uint16,
+    int32,
+    uint32,
+    uint64,
+    float32,
+    fault
+  } bsaDataType_t;
   //
   //  Class that defines the interface from the BSA processor to a PV record
   //
@@ -42,7 +52,14 @@ namespace Bsa {
     //  Flush the data out
     //
     virtual void flush() = 0;
-  };
+    //
+    // Return BSA datatype for this PV 
+    //  
+    //
+    virtual bsaDataType_t * get_p_type() const { return _p_type; }
+ protected:
+    bsaDataType_t *_p_type;
+};
 
   //
   //  Class that consists of the PV records for one BSA array
@@ -74,7 +91,12 @@ namespace Bsa {
     //  (element order matches diagnostic bus element order)
     //
     virtual std::vector<Pv*> pvs() = 0;
-  };
+    //
+    // Add the capability to preprocess the data prior to assigning to PVs 
+    //  
+    //
+    virtual void procChannelData(unsigned, double, double, bool) = 0;
+};
 
   //
   //  The interface for updating PV records from the AmcCarrier buffers
