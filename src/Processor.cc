@@ -7,6 +7,7 @@
 
 #include <queue>
 #include <stdio.h>
+#include <algorithm>
 
 static unsigned _nReadout = 1024 * 128;
 
@@ -215,7 +216,7 @@ int ProcessorImpl::update(PvArray& array)
     array.append(entry.pulseId());
 
     //  Fill channel data waveforms
-    for(unsigned j=0; j<numChannelData; j++)
+    for(unsigned j=0; j<std::min(numChannelData, (const int&)pvs.size()); j++)
     {
       // Adding new call to procChannelData() here that will do the partitioning of the channel data.
       // Two new parameters are passed: the number of user-defined BSA channels (i.e. pvs.size())
@@ -224,7 +225,7 @@ int ProcessorImpl::update(PvArray& array)
       array.procChannelData(entry.channel_data[j].n(),
                             entry.channel_data[j].mean(),
                             entry.channel_data[j].rms2(),
-                            (j == (numChannelData - 1) || j == (pvs.size() - 1)));
+                            (j == std::min(numChannelData, (const int&)pvs.size()) - 1));
     }
   }
 
