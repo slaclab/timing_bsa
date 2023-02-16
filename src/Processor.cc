@@ -208,24 +208,25 @@ int ProcessorImpl::update(PvArray& array)
     }
   }
 
-  for(unsigned i=0; i<record->entries.size(); i++) {
+  for(unsigned i=0; i<record->entries.size(); i++) 
+  {
     // Process next entry (i.e. pulse ID)
     const Entry& entry = record->entries[i];
 
-    //  Fill pulseid waveform
+    // Fill pulseid waveform
     array.append(entry.pulseId());
 
-    //  Fill channel data waveforms
-    for(unsigned j=0; j<std::min(numChannelData, (const int&)pvs.size()); j++)
+    // Fill channel data waveforms
+    for(unsigned j=0; j<std::min(numChannelData, (const int&)array.pvs().size()); j++)
     {
       // Adding new call to procChannelData() here that will do the partitioning of the channel data.
-      // Two new parameters are passed: the number of user-defined BSA channels (i.e. pvs.size())
+      // Two new parameters are passed: the number of user-defined BSA channels (i.e. array.pvs.size())
       // and a boolean to indicate if we are done sending all the channel data for the current pulse. 
       // Note the data are sent as 32-bit chunks and those are splitted as needed in the Asyn driver.
       array.procChannelData(entry.channel_data[j].n(),
                             entry.channel_data[j].mean(),
                             entry.channel_data[j].rms2(),
-                            (j == std::min(numChannelData, (const int&)pvs.size()) - 1));
+                            (j == std::min(numChannelData - 1, (const int&)array.pvs().size() - 1)));
     }
   }
 
