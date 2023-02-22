@@ -61,6 +61,10 @@ namespace Bsa {
         next  = _last;
       }
 
+      if (n > MAXREADOUT) {
+        printf("ERROR: Reader::next allocating record with %u entries\n", n);
+      }
+
       Record& record = _record;
       record.entries.resize(n);
 

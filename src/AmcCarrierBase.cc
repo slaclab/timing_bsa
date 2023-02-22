@@ -246,6 +246,9 @@ Record*  AmcCarrierBase::get       (unsigned array,
     if (end <= begin && wrap) {
       uint64_t nb      = last-begin+end-start;
       unsigned entries = nb/sizeof(Entry);
+      if (entries > FAULTSIZE) {
+        printf("ERROR: AmcCarrierBase::get reading %u entries with wrap\n",entries);
+      }
       end += sizeof(Entry)*entries - nb;
       record.entries.resize( entries );
       _fill( record.entries.data(), 
@@ -257,6 +260,9 @@ Record*  AmcCarrierBase::get       (unsigned array,
     }
     else {
       unsigned entries = (end -begin)/sizeof(Entry);
+      if (entries > FAULTSIZE) {
+        printf("ERROR: AmcCarrierBase::get reading %u entries\n",entries);
+      }
       if (entries) {
         end = begin+entries*sizeof(Entry);
         record.entries.resize(entries);
