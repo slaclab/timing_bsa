@@ -36,6 +36,8 @@ namespace Bsa {
 
   class Record {
   public:
+    Record(unsigned nreserve=1) { entries.reserve(nreserve); }
+  public:
     unsigned  buffer;
     unsigned  time_secs;
     unsigned  time_nsecs;

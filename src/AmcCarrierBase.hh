@@ -50,6 +50,7 @@ namespace Bsa {
                          uint64_t empty, uint64_t error) const;
   protected:
     std::vector<ArrayState> _state;
+    mutable Record          _record;
     Path       _path;
     Path       _bpath;
     Path       _wpath0;

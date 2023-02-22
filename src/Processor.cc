@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 static unsigned _nReadout = 1024 * 128;
+static const unsigned MAXREADOUT = 1<<20;
 
 namespace Bsa {
 
@@ -17,7 +18,7 @@ namespace Bsa {
     static void     set_nReadout(unsigned v) {_nReadout=v;} 
     static unsigned get_nReadout() { return _nReadout;}
   public:
-    Reader() : _timestamp(0), _next(0), _last(0), _end(0) {}
+    Reader() : _timestamp(0), _next(0), _last(0), _end(0), _record(MAXREADOUT) {}
     ~Reader() {}
   public:
     bool     done () const { return _next==_last; }
@@ -60,10 +61,10 @@ namespace Bsa {
         next  = _last;
       }
 
-      Record* record = new Record;
-      record->entries.resize(n);
+      Record& record = _record;
+      record.entries.resize(n);
 
-      hw._fill(record->entries.data(), _next, next);
+      hw._fill(record.entries.data(), _next, next);
       _next = nnext;
 
       if (done()) {
@@ -71,13 +72,14 @@ namespace Bsa {
         array.set(_timestamp>>32, _timestamp&0xffffffff);
       }
 
-      return record;
+      return &record;
     }
   private:
     uint64_t _timestamp;
     uint64_t _next;
     uint64_t _last;
     uint64_t _end;
+    Record   _record;
   };
 
   class ProcessorImpl : public Processor {
@@ -88,7 +90,7 @@ namespace Bsa {
     { if (lInit) _hw.initialize(); }
     ProcessorImpl(const char* ip,
                   bool lInit,
-                  bool lDebug) : _hw(*new AmcCarrier(ip)), _debug(lDebug) 
+                  bool lDebug) : _hw(*new AmcCarrier(ip)), _debug(lDebug)
     { if (lInit) _hw.initialize(); }
     ProcessorImpl() : _hw(*AmcCarrier::instance()), _debug(false)
     {}
@@ -103,6 +105,7 @@ namespace Bsa {
     Reader               _reader[HSTARRAYN-HSTARRAY0];
     std::queue<unsigned> _readerQueue;
     bool                 _debug;
+    Record               _emptyRecord;
   };
 
 };
@@ -184,7 +187,7 @@ int ProcessorImpl::update(PvArray& array)
     unsigned ifltb = array.array()-HSTARRAY0;
     if (_readerQueue.empty()) {
       _readerQueue.push(ifltb);
-      record = new Record;
+      record = &_emptyRecord;
     }
     else if (_readerQueue.front()==ifltb) {
       Reader& reader = _reader[ifltb];
@@ -203,7 +206,7 @@ int ProcessorImpl::update(PvArray& array)
         _readerQueue.pop();
     }
     else {  // Some other fault buffer readout is in progress
-      record = new Record;
+      record = &_emptyRecord;
     }
   }
 
@@ -218,7 +221,6 @@ int ProcessorImpl::update(PvArray& array)
                      entry.channel_data[j].rms2());
   }
   current.nacq += record->entries.size();
-  delete record;
   _state[iarray] = current;
   return current.nacq;
 }

@@ -5,6 +5,8 @@
 
 using namespace Bsa;
 
+static const unsigned FAULTSIZE   = 1<<20;
+static const uint64_t FAULTSIZE_L = 1ULL<<20;
 //#define BURSTSIZE 0x800
 //#define DBUG
 
@@ -21,7 +23,7 @@ static uint64_t GET_U1(ScalVal_RO s, unsigned nelms)
   return r;
 }
 
-AmcCarrierBase::AmcCarrierBase() : _state(HSTARRAYN)
+AmcCarrierBase::AmcCarrierBase() : _state(HSTARRAYN), _record(FAULTSIZE)
 {
 }
 
@@ -56,7 +58,7 @@ void     AmcCarrierBase::initialize()
   }
   //  Setup the fault arrays to be LARGER (1M entries)
   for(unsigned i=HSTARRAY0; i<HSTARRAYN; i++) {
-    pn = p+(1ULL<<20)*bsaSize;
+    pn = p+FAULTSIZE_L*bsaSize;
     //    pe = pn - BURSTSIZE;
     pe = pn;
     IndexRange rng(i);
@@ -185,6 +187,9 @@ Record*  AmcCarrierBase::getRecord (unsigned array,
   return get(array,begin,&next);
 }
 
+//
+//  This method is only used for testing.  So, allow the dynamic allocation.
+//
 uint8_t*  AmcCarrierBase::getBuffer (uint64_t begin,
                                      uint64_t end  ) const
 {
@@ -197,7 +202,7 @@ Record*  AmcCarrierBase::get       (unsigned array,
                                     uint64_t begin,
                                     uint64_t* next) const
 {
-  Record& record = *new Record;
+  Record& record = _record;
   record.buffer = array;
 
   uint64_t start=0,end=0;
