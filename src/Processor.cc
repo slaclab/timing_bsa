@@ -56,8 +56,8 @@ namespace Bsa {
       //     3.      _next                                           next   read _next:_last
       //     4.                                _next    next                read _next:next
       //     5.                                _next                 next   read _next:_end; _next=start
-      if ((_next < _last && next < _last) ||
-          (_next > _last && next < _end)) {
+      if ((_next <  _last && next < _last) ||
+          (_next >= _last && next < _end)) {
         //  read _next:next
       }
       else if (_next < _last) {
