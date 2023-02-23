@@ -49,16 +49,34 @@ namespace Bsa {
       uint64_t next = _next + n*sizeof(Entry);  // end of current read
       uint64_t nnext = next;                    // start of next read
 
-      if (next > _end) {  // truncate at the wrap point
+      //  What are the possibilities?
+      //    (start)                   (_last)                (_end)
+      //     1.      _next      next                                        read _next:next
+      //     2.      _next                      next                        read _next:_last
+      //     3.      _next                                           next   read _next:_last
+      //     4.                                _next    next                read _next:next
+      //     5.                                _next                 next   read _next:_end; _next=start
+      if ((_next < _last && next < _last) ||
+          (_next > _last && next < _end)) {
+        //  read _next:next
+      }
+      else if (_next < _last) {
+        //  read _next:_last
+        n = (_last - _next) / sizeof(Entry);
+        nnext = _last;
+        next  = _last;
+      }
+      else {
+        //  read _next:_end
         next = _end;
         n = (next - _next) / sizeof(Entry);
         IndexRange rng(array.array());
         hw._startAddr->getVal(&nnext,1,&rng);
       }
-      else if (_next < _last && _last < next) {  // truncate to _last
-        n = (_last - _next) / sizeof(Entry);
-        nnext = _last;
-        next  = _last;
+
+      if (_next + n*sizeof(Entry) != next) {
+        printf("%s:%-4d [Truncated record]  _next 0x%016llx  next 0x%016llx  _last 0x%016llx  _end 0x%016llx  _next+n 0x%016llx  n %u\n",
+               __FILE__,__LINE__,_next,next,_last,_end,_next+n*sizeof(Entry),n);
       }
 
       if (n > MAXREADOUT) {
