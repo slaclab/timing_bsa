@@ -74,11 +74,6 @@ namespace Bsa {
         hw._startAddr->getVal(&nnext,1,&rng);
       }
 
-      if (_next + n*sizeof(Entry) != next) {
-        printf("%s:%-4d [Truncated record]  _next 0x%016llx  next 0x%016llx  _last 0x%016llx  _end 0x%016llx  _next+n 0x%016llx  n %u\n",
-               __FILE__,__LINE__,_next,next,_last,_end,_next+n*sizeof(Entry),n);
-      }
-
       if (n > MAXREADOUT) {
         printf("ERROR: Reader::next allocating record with %u entries\n", n);
       }
@@ -87,6 +82,21 @@ namespace Bsa {
       record.entries.resize(n);
 
       hw._fill(record.entries.data(), _next, next);
+
+      //  Detect mis-aligned entries
+      unsigned n0 = _next / sizeof(Entry);
+      if (n0*sizeof(Entry) != _next) {
+        const Entry& e = record.entries[0];
+        printf("%s:%-4d [Misaligned record]  _next 0x%016llx  nch %u  pid 0x%016llx\n",
+               __FILE__,__LINE__,_next,e.nchannels(),e.pulseId());
+     }
+      
+      //  _last or _end dont occur at an Entry boundary
+      if (_next + n*sizeof(Entry) != next) {
+        printf("%s:%-4d [Truncated record]  _next 0x%016llx  next 0x%016llx  _last 0x%016llx  _end 0x%016llx  _next+n 0x%016llx  n %u\n",
+               __FILE__,__LINE__,_next,next,_last,_end,_next+n*sizeof(Entry),n);
+      }
+
       _next = nnext;
 
       if (done()) {
