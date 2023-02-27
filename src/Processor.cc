@@ -39,6 +39,9 @@ namespace Bsa {
       _end  = end;
 
       array.reset(timestamp>>32,timestamp&0xffffffff);
+
+      printf("%s:%-4d []  array %u  _timestamp 0x%016llx  _next 0x%016llx  _last 0x%016llx  __end 0x%016llx\n",
+             __FILE__,__LINE__,iarray,_next,_last,_end);
     }
     Record* next(PvArray& array, AmcCarrierBase& hw)
     {
@@ -173,13 +176,6 @@ int ProcessorImpl::update(PvArray& array)
   std::vector<Pv*> pvs = array.pvs();
   ArrayState current(_hw.state(iarray));
 
-#if 0
-  printf("current[%d]: wrAddr %016llx  next %016llx  clear %u  wrap %u  nacq %u\n",
-         iarray,current.wrAddr,current.next,current.clear,current.wrap,current.nacq);
-  printf("state  [%d]: wrAddr %016llx  next %016llx  clear %u  wrap %u  nacq %u\n",
-         iarray,_state[iarray].wrAddr,_state[iarray].next,_state[iarray].clear,_state[iarray].wrap,_state[iarray].nacq);
-#endif
-
   Record* record;
 
   if (array.array() < HSTARRAY0) {
@@ -216,6 +212,12 @@ int ProcessorImpl::update(PvArray& array)
     }
   }
   else {  // >= HSTARRAY0
+
+#if 1
+    printf("%s:%-4d [current %d]: wrAddr %016llx  next %016llx  clear %u  wrap %u  nacq %u\n",
+           __FILE__,__LINE__,iarray,current.wrAddr,current.next,current.clear,current.wrap,current.nacq);
+#endif
+
     unsigned ifltb = array.array()-HSTARRAY0;
     if (_readerQueue.empty()) {
       _readerQueue.push(ifltb);
