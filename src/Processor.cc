@@ -7,9 +7,16 @@
 
 #include <queue>
 #include <stdio.h>
+#include <time.h>
 
 static unsigned _nReadout = 1024 * 128;
 static const unsigned MAXREADOUT = 1<<20;
+
+static char* timestr() 
+{
+  time_t t = time(NULL);
+  return asctime(localtime(&t));
+}
 
 namespace Bsa {
 
@@ -40,8 +47,8 @@ namespace Bsa {
 
       array.reset(timestamp>>32,timestamp&0xffffffff);
 
-      printf("%s:%-4d []  array %u  _timestamp 0x%016llx  _next 0x%016llx  _last 0x%016llx  __end 0x%016llx\n",
-             __FILE__,__LINE__,iarray,_next,_last,_end);
+      printf("%s:  %s:%-4d []  array %u  _timestamp 0x%016llx  _next 0x%016llx  _last 0x%016llx  __end 0x%016llx\n",
+             timestr(),__FILE__,__LINE__,iarray,_timestamp,_next,_last,_end);
     }
     Record* next(PvArray& array, AmcCarrierBase& hw)
     {
@@ -90,14 +97,14 @@ namespace Bsa {
       unsigned n0 = _next / sizeof(Entry);
       if (n0*sizeof(Entry) != _next) {
         const Entry& e = record.entries[0];
-        printf("%s:%-4d [Misaligned record]  _next 0x%016llx  nch %u  pid 0x%016llx\n",
-               __FILE__,__LINE__,_next,e.nchannels(),e.pulseId());
+        printf("%s:  %s:%-4d [Misaligned record]  _next 0x%016llx  nch %u  pid 0x%016llx\n",
+               timestr(),__FILE__,__LINE__,_next,e.nchannels(),e.pulseId());
      }
       
       //  _last or _end dont occur at an Entry boundary
       if (_next + n*sizeof(Entry) != next) {
-        printf("%s:%-4d [Truncated record]  _next 0x%016llx  next 0x%016llx  _last 0x%016llx  _end 0x%016llx  _next+n 0x%016llx  n %u\n",
-               __FILE__,__LINE__,_next,next,_last,_end,_next+n*sizeof(Entry),n);
+        printf("%s:  %s:%-4d [Truncated record]  _next 0x%016llx  next 0x%016llx  _last 0x%016llx  _end 0x%016llx  _next+n 0x%016llx  n %u\n",
+               timestr(),__FILE__,__LINE__,_next,next,_last,_end,_next+n*sizeof(Entry),n);
       }
 
       _next = nnext;
@@ -214,8 +221,8 @@ int ProcessorImpl::update(PvArray& array)
   else {  // >= HSTARRAY0
 
 #if 1
-    printf("%s:%-4d [current %d]: wrAddr %016llx  next %016llx  clear %u  wrap %u  nacq %u\n",
-           __FILE__,__LINE__,iarray,current.wrAddr,current.next,current.clear,current.wrap,current.nacq);
+    printf("%s:  %s:%-4d [current %d]: wrAddr %016llx  next %016llx  clear %u  wrap %u  nacq %u\n",
+           timestr(),__FILE__,__LINE__,iarray,current.wrAddr,current.next,current.clear,current.wrap,current.nacq);
 #endif
 
     unsigned ifltb = array.array()-HSTARRAY0;
