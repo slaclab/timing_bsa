@@ -168,7 +168,12 @@ static void show_usage(const char* p)
   printf("** Collect BSA data **\n");
   printf("Usage: %s [options]\n",p);
   printf("Options: -a <IP address dotted notation> : set carrier IP\n");
+
+  time_t t = time(NULL);
+  struct tm* ptm = localtime(&t);
+  printf("asctime %s\n",asctime(ptm));
 }
+
 
 int main(int argc, char* argv[])
 {

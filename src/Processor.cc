@@ -225,6 +225,12 @@ int ProcessorImpl::update(PvArray& array)
            timestr(),__FILE__,__LINE__,iarray,current.wrAddr,current.next,current.clear,current.wrap,current.nacq);
 #endif
 
+    //  Sometimes we are called when the buffer is not yet ready
+    if ((_hw.done() & 1<<array.array())==0) {
+      printf("%s:%-4d [not done]:  array %u\n",__FILE__,__LINE__,iarray);
+      return 0;
+    }
+
     unsigned ifltb = array.array()-HSTARRAY0;
     if (_readerQueue.empty()) {
       _readerQueue.push(ifltb);
