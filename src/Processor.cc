@@ -47,8 +47,9 @@ namespace Bsa {
 
       array.reset(timestamp>>32,timestamp&0xffffffff);
 
-      printf("%s:  %s:%-4d []  array %u  _timestamp 0x%016llx  _next 0x%016llx  _last 0x%016llx  __end 0x%016llx\n",
-             timestr(),__FILE__,__LINE__,iarray,_timestamp,_next,_last,_end);
+      uint64_t hw_done = hw.done();
+      printf("%s:  %s:%-4d []  array %u  _timestamp 0x%016llx  _next 0x%016llx  _last 0x%016llx  __end 0x%016llx  done 0x%016llx\n",
+             timestr(),__FILE__,__LINE__,iarray,_timestamp,_next,_last,_end,hw_done);
     }
     Record* next(PvArray& array, AmcCarrierBase& hw)
     {
@@ -99,7 +100,7 @@ namespace Bsa {
         const Entry& e = record.entries[0];
         printf("%s:  %s:%-4d [Misaligned record]  _next 0x%016llx  nch %u  pid 0x%016llx\n",
                timestr(),__FILE__,__LINE__,_next,e.nchannels(),e.pulseId());
-     }
+      }
       
       //  _last or _end dont occur at an Entry boundary
       if (_next + n*sizeof(Entry) != next) {
@@ -112,6 +113,9 @@ namespace Bsa {
       if (done()) {
         hw   .reset(array.array());
         array.set(_timestamp>>32, _timestamp&0xffffffff);
+        uint64_t hw_done = hw.done();
+        printf("%s:%-4d [done]:  array %u  hw.done 0x%016llx\n",__FILE__,__LINE__,array.array(),hw_done);
+        return 0;
       }
 
       return &record;
@@ -226,9 +230,11 @@ int ProcessorImpl::update(PvArray& array)
 #endif
 
     //  Sometimes we are called when the buffer is not yet ready
-    if ((_hw.done() & 1<<array.array())==0) {
-      printf("%s:%-4d [not done]:  array %u\n",__FILE__,__LINE__,iarray);
-      return 0;
+    { uint64_t hw_done = _hw.done();
+      if ((hw_done & (1<<array.array()))==0) {
+        printf("%s:%-4d [not done]:  array %u  hw.done 0x%016llx\n",__FILE__,__LINE__,iarray,hw_done);
+        return 0;
+      }
     }
 
     unsigned ifltb = array.array()-HSTARRAY0;
