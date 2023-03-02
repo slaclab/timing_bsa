@@ -115,7 +115,6 @@ namespace Bsa {
         array.set(_timestamp>>32, _timestamp&0xffffffff);
         uint64_t hw_done = hw.done();
         printf("%s:%-4d [done]:  array %u  hw.done 0x%016llx\n",__FILE__,__LINE__,array.array(),hw_done);
-        return 0;
       }
 
       return &record;
