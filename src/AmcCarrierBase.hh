@@ -29,7 +29,7 @@ namespace Bsa {
     uint64_t inprogress() const;
     uint64_t done      () const;
     bool     done      (unsigned array) const;
-    void     pend      (unsigned array);
+    void     pend      (unsigned array) { _pend |= (1ULL << array); }
     uint32_t status    (unsigned array) const;
     ArrayState state   (unsigned array) const;
     const std::vector<ArrayState>& state   ();
