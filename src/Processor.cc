@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <time.h>
 
+#define DONE_WORKAROUND
+
 static unsigned _nReadout = 1024 * 128;
 static const unsigned MAXREADOUT = 1<<20;
 
@@ -25,15 +27,30 @@ namespace Bsa {
     static void     set_nReadout(unsigned v) {_nReadout=v;} 
     static unsigned get_nReadout() { return _nReadout;}
   public:
-    Reader() : _timestamp(0), _next(0), _last(0), _end(0), _record(MAXREADOUT) {}
+    Reader() : _timestamp(0), _next(0), _last(0), _end(0), _preset(0), _record(MAXREADOUT) {}
     ~Reader() {}
   public:
     bool     done () const { return _next==_last; }
-    void     reset(PvArray&              array, 
+#ifdef DONE_WORKAROUND
+    void     preset (const ArrayState&    state) { _preset = state.wrAddr; }
+    bool     pending(const ArrayState&    state) 
+    { 
+      printf("%s:  %s:%-4d [pending]: last 0x%016llx  wrAddr 0x%016llx\n",
+             timestr(),__FILE__,__LINE__,_last,state.wrAddr);
+      return _last&&(_last!=state.wrAddr); 
+    }
+#endif
+    bool     reset(PvArray&              array, 
                    const ArrayState&     state,
                    AmcCarrierBase&       hw, 
                    uint64_t              timestamp)
     {
+#ifdef DONE_WORKAROUND
+      //  Check if wrAddr pointer has moved.  If so, we're reading the wrong buffer.
+      if (state.wrAddr != _preset)
+        return false;
+#endif
+
       unsigned iarray = array.array();
       IndexRange rng(iarray);
       uint64_t start,end;
@@ -41,7 +58,10 @@ namespace Bsa {
       hw._endAddr  ->getVal(&end  ,1,&rng);
 
       _timestamp = state.timestamp;
-      _next = state.wrap ? state.wrAddr : start;
+      //  If wrap is set, the buffer is complete from wrAddr -> end; start -> wrAddr
+      //  Else, if the buffer was read before, continue from where we ended
+      //  Else read from the start
+      _next = state.wrap ? state.wrAddr : (_last ? _last : start);
       _last = state.wrAddr;
       _end  = end;
 
@@ -50,6 +70,8 @@ namespace Bsa {
       uint64_t hw_done = hw.done();
       printf("%s:  %s:%-4d []  array %u  _timestamp 0x%016llx  _next 0x%016llx  _last 0x%016llx  __end 0x%016llx  done 0x%016llx\n",
              timestr(),__FILE__,__LINE__,iarray,_timestamp,_next,_last,_end,hw_done);
+
+      return true;
     }
     Record* next(PvArray& array, AmcCarrierBase& hw)
     {
@@ -124,6 +146,7 @@ namespace Bsa {
     uint64_t _next;
     uint64_t _last;
     uint64_t _end;
+    uint64_t _preset;
     Record   _record;
   };
 
@@ -228,26 +251,35 @@ int ProcessorImpl::update(PvArray& array)
            timestr(),__FILE__,__LINE__,iarray,current.wrAddr,current.next,current.clear,current.wrap,current.nacq);
 #endif
 
-    //  Sometimes we are called when the buffer is not yet ready
-    { uint64_t hw_done = _hw.done();
-      if ((hw_done & ((uint64_t) 1<<array.array()))==0) {
-        printf("%s:%-4d [not done]:  array %u  hw.done 0x%016llx\n",__FILE__,__LINE__,iarray,hw_done);
-        return 0;
-      }
-    }
-
     unsigned ifltb = array.array()-HSTARRAY0;
+    Reader& reader = _reader[ifltb];
     if (_readerQueue.empty()) {
+#ifdef DONE_WORKAROUND
+      reader.preset(current);  // prepare check for erroneous hw.done signal
+#endif
       _readerQueue.push(ifltb);
       record = &_emptyRecord;
     }
     else if (_readerQueue.front()==ifltb) {
-      Reader& reader = _reader[ifltb];
       if (reader.done()) {
         //  A new fault was latched
         current.nacq = 0;
-        reader.reset(array,current,_hw,current.timestamp-(1ULL<<32));
-        record = reader.next(array,_hw);
+        if (reader.reset(array,current,_hw,current.timestamp-(1ULL<<32))) {
+          record = reader.next(array,_hw);
+        }
+#ifdef DONE_WORKAROUND
+        else {
+          // We got the wrong done signal.  Find the correct one and queue it.
+          for(unsigned i=HSTARRAY0; i<HSTARRAYN; i++) {
+            if (_reader[i-HSTARRAY0].pending(_hw.state(i))) {
+              _hw.done(i);
+              printf("%s:  %s:%-4d [correction]: wrong buffer %d  replace with %d\n",
+                     timestr(),__FILE__,__LINE__,iarray,i);
+              break;
+            }
+          }
+        }
+#endif
       }
       else {
         //  A previous fault readout is in progress

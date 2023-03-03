@@ -23,7 +23,7 @@ static uint64_t GET_U1(ScalVal_RO s, unsigned nelms)
   return r;
 }
 
-AmcCarrierBase::AmcCarrierBase() : _state(HSTARRAYN), _record(FAULTSIZE)
+AmcCarrierBase::AmcCarrierBase() : _state(HSTARRAYN), _record(FAULTSIZE), _pend(0)
 {
 }
 
@@ -76,6 +76,7 @@ void     AmcCarrierBase::initialize()
   }
 
   _memEnd = p;
+  _pend   = 0;
 }
 
 void     AmcCarrierBase::reset     (unsigned array)
@@ -84,6 +85,7 @@ void     AmcCarrierBase::reset     (unsigned array)
   uint32_t uzro=0,uone=1;
   _sInit    ->setVal(&uone,1,&rng);
   _sInit    ->setVal(&uzro,1,&rng);
+  _pend &= ~(1ULL << array);
 }
 
 void     AmcCarrierBase::ackClear  (unsigned array)
@@ -115,6 +117,9 @@ uint64_t AmcCarrierBase::done      () const
     if (v[i]&4)
       r |= 1ULL<<i;
   }
+
+  r |= _pend;
+
   return r;
 }
 
@@ -123,6 +128,8 @@ bool AmcCarrierBase::done      (unsigned array) const
   IndexRange rng(array);
   unsigned v;
   _sDone->getVal(&v,1,&rng);
+
+  v |= _pend & (1ULL << array);
   return v;
 }
 
@@ -232,9 +239,7 @@ Record*  AmcCarrierBase::get       (unsigned array,
     if (end < start or end > last) {
       printf("Trap BSA ptr error:  array %u  startAddr 0x%016llx  endAddr 0x%016llx  wrAddr 0x%016llx  begin 0x%016llx.  Resetting\n",
              array, start, last, end, begin);
-      uint32_t uzro=0,uone=1;
-      _sInit    ->setVal(&uone,1,&rng);
-      _sInit    ->setVal(&uzro,1,&rng);
+      const_cast<AmcCarrierBase*>(this)->reset(array);
       record.entries.resize(0);
       return &record;
     }

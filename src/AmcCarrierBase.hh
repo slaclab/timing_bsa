@@ -29,6 +29,7 @@ namespace Bsa {
     uint64_t inprogress() const;
     uint64_t done      () const;
     bool     done      (unsigned array) const;
+    void     pend      (unsigned array);
     uint32_t status    (unsigned array) const;
     ArrayState state   (unsigned array) const;
     const std::vector<ArrayState>& state   ();
@@ -72,6 +73,7 @@ namespace Bsa {
     ScalVal_RO _trAddr;
     ScalVal_RO _dram;
     uint64_t   _memEnd;
+    uint64_t   _pend;
 
     friend class Reader;
   };
