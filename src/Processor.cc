@@ -230,7 +230,7 @@ int ProcessorImpl::update(PvArray& array)
 
     //  Sometimes we are called when the buffer is not yet ready
     { uint64_t hw_done = _hw.done();
-      if ((hw_done & (1<<array.array()))==0) {
+      if ((hw_done & ((uint64_t) 1<<array.array()))==0) {
         printf("%s:%-4d [not done]:  array %u  hw.done 0x%016llx\n",__FILE__,__LINE__,iarray,hw_done);
         return 0;
       }
