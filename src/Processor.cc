@@ -270,9 +270,10 @@ int ProcessorImpl::update(PvArray& array)
 #ifdef DONE_WORKAROUND
         else {
           // We got the wrong done signal.  Find the correct one and queue it.
+          _hw.reset(iarray);
           for(unsigned i=HSTARRAY0; i<HSTARRAYN; i++) {
             if (_reader[i-HSTARRAY0].pending(_hw.state(i))) {
-              _hw.done(i);
+              _hw.pend(i);
               printf("%s:  %s:%-4d [correction]: wrong buffer %d  replace with %d\n",
                      timestr(),__FILE__,__LINE__,iarray,i);
               break;
