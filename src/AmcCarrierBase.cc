@@ -23,7 +23,7 @@ static uint64_t GET_U1(ScalVal_RO s, unsigned nelms)
   return r;
 }
 
-AmcCarrierBase::AmcCarrierBase() : _state(HSTARRAYN), _record(FAULTSIZE), _pend(0)
+AmcCarrierBase::AmcCarrierBase() : _state(HSTARRAYN), _record(FAULTSIZE)
 {
 }
 
@@ -76,7 +76,6 @@ void     AmcCarrierBase::initialize()
   }
 
   _memEnd = p;
-  _pend   = 0;
 }
 
 void     AmcCarrierBase::reset     (unsigned array)
@@ -85,7 +84,6 @@ void     AmcCarrierBase::reset     (unsigned array)
   uint32_t uzro=0,uone=1;
   _sInit    ->setVal(&uone,1,&rng);
   _sInit    ->setVal(&uzro,1,&rng);
-  _pend &= ~(1ULL << array);
 }
 
 void     AmcCarrierBase::ackClear  (unsigned array)
@@ -118,8 +116,6 @@ uint64_t AmcCarrierBase::done      () const
       r |= 1ULL<<i;
   }
 
-  r |= _pend;
-
   return r;
 }
 
@@ -129,7 +125,6 @@ bool AmcCarrierBase::done      (unsigned array) const
   unsigned v;
   _sDone->getVal(&v,1,&rng);
 
-  v |= _pend & (1ULL << array);
   return v;
 }
 

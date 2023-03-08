@@ -31,25 +31,18 @@ namespace Bsa {
     ~Reader() {}
   public:
     bool     done () const { return _next==_last; }
-#ifdef DONE_WORKAROUND
     void     preset (const ArrayState&    state) { _preset = state.wrAddr; }
-    bool     pending(const ArrayState&    state) 
-    { 
-      printf("%s:  %s:%-4d [pending]: last 0x%016llx  wrAddr 0x%016llx\n",
-             timestr(),__FILE__,__LINE__,_last,state.wrAddr);
-      return _last&&(_last!=state.wrAddr); 
-    }
-#endif
     bool     reset(PvArray&              array, 
                    const ArrayState&     state,
                    AmcCarrierBase&       hw, 
                    uint64_t              timestamp)
     {
-#ifdef DONE_WORKAROUND
-      //  Check if wrAddr pointer has moved.  If so, we're reading the wrong buffer.
-      if (state.wrAddr != _preset)
+      //  Check if wrAddr pointer has moved.  If so, the acquisition isn't done
+      if (state.wrAddr != _preset) {
+        printf("%s:  %s:%-4d [reset]: not ready 0x%016llx  wrAddr 0x%016llx\n",
+               timestr(),__FILE__,__LINE__,_preset,state.wrAddr);
         return false;
-#endif
+      }
 
       unsigned iarray = array.array();
       IndexRange rng(iarray);
@@ -64,6 +57,15 @@ namespace Bsa {
       _next = state.wrap ? state.wrAddr : (_last ? _last : start);
       _last = state.wrAddr;
       _end  = end;
+
+      //  Check if wrAddr is properly aligned to the record size.
+      unsigned n0 = _last / sizeof(Entry);
+      if (n0*sizeof(Entry) != _last) {
+        const Entry& e = *reinterpret_cast<const Entry*>(_last);
+        printf("%s:  %s:%-4d [reset] misaligned _last 0x%016llx  nch %u  pid 0x%016llx\n",
+               timestr(),__FILE__,__LINE__,_last,e.nchannels(),e.pulseId());
+        return false;
+      }
 
       array.reset(timestamp>>32,timestamp&0xffffffff);
 
@@ -254,9 +256,7 @@ int ProcessorImpl::update(PvArray& array)
     unsigned ifltb = array.array()-HSTARRAY0;
     Reader& reader = _reader[ifltb];
     if (_readerQueue.empty()) {
-#ifdef DONE_WORKAROUND
       reader.preset(current);  // prepare check for erroneous hw.done signal
-#endif
       _readerQueue.push(ifltb);
       record = &_emptyRecord;
     }
@@ -267,21 +267,12 @@ int ProcessorImpl::update(PvArray& array)
         if (reader.reset(array,current,_hw,current.timestamp-(1ULL<<32))) {
           record = reader.next(array,_hw);
         }
-#ifdef DONE_WORKAROUND
         else {
           // We got the wrong done signal.  Find the correct one and queue it.
           _hw.reset(iarray);
           _readerQueue.pop();
-          for(unsigned i=HSTARRAY0; i<HSTARRAYN; i++) {
-            if (_reader[i-HSTARRAY0].pending(_hw.state(i))) {
-              _hw.pend(i);
-              printf("%s:  %s:%-4d [correction]: wrong buffer %d  replace with %d\n",
-                     timestr(),__FILE__,__LINE__,iarray,i);
-              return 0;
-            }
-          }
+          return 0;  // don't try to correct anything, just skip
         }
-#endif
       }
       else {
         //  A previous fault readout is in progress
