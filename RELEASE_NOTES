@@ -1,3 +1,9 @@
+R2.2.0-1.0   03/09/2023  Kukhee Kim
+              - resolve double free issue to prevent ioc crash
+              - debugging fault buffer bug, test workaround
+              - fixing firmware bug for the fault buffer and clean up workaround
+              - using syslog for the debugging message
+
 R2.2.0-0.2   01/13/2023  Kukhee Kim
               - Add throttled reader for fault buffer readout.  Buffer readouts are queued in the order seen by the thread.
               - adjust number of Edefs to 48
