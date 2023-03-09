@@ -2,6 +2,7 @@
 #include "BsaDefs.hh"
 
 #include <stdio.h>
+#include <syslog.h>
 
 using namespace Bsa;
 
@@ -50,10 +51,8 @@ void     AmcCarrierBase::initialize()
     _sMode    ->setVal(&uzro,1,&rng);
     _sInit    ->setVal(&uone,1,&rng);
     _sInit    ->setVal(&uzro,1,&rng);
-#ifdef DBUG
-    printf("DBUG:  array %u  startAddr 0x%016llx  endAddr 0x%016llx\n",
+    syslog(LOG_DEBUG,"<D>  array %u  startAddr 0x%016llx  endAddr 0x%016llx",
            i, p, pe);
-#endif
     p = pn;
   }
   //  Setup the fault arrays to be LARGER (1M entries)
@@ -68,10 +67,8 @@ void     AmcCarrierBase::initialize()
     _sMode    ->setVal(&uzro,1,&rng);
     _sInit    ->setVal(&uone,1,&rng);
     _sInit    ->setVal(&uzro,1,&rng);
-#ifdef DBUG
-    printf("DBUG:  array %u  startAddr 0x%016llx  endAddr 0x%016llx\n",
+    syslog(LOG_DEBUG,"<D>  array %u  startAddr 0x%016llx  endAddr 0x%016llx",
            i, p, pe);
-#endif
     p = pn;
   }
 
@@ -161,12 +158,6 @@ const std::vector<ArrayState>& AmcCarrierBase::state()
     _state[i].wrAddr    = wrAddr[i];
   }
 
-#if 0
-  for(unsigned i=0; i<HSTARRAYN; i++)
-    printf("state [%u] %llx %llx\n",
-           i, tstamp[i], wrAddr[i]);
-#endif
-
   return _state;
 }
 
@@ -225,14 +216,8 @@ Record*  AmcCarrierBase::get       (unsigned array,
     uint64_t last;
     _endAddr->getVal(&last,1,&rng);
 
-
-#ifdef DBUG
-    printf("DBUG:  array %u  done %u  startAddr 0x%016llx  endAddr 0x%016llx  wrAddr 0x%016llx  begin 0x%016llx\n",
-           array, status(array), start, last, end, begin);
-#endif
-
     if (end < start or end > last) {
-      printf("Trap BSA ptr error:  array %u  startAddr 0x%016llx  endAddr 0x%016llx  wrAddr 0x%016llx  begin 0x%016llx.  Resetting\n",
+      syslog(LOG_ERR,"<E> Trap BSA ptr error:  array %u  startAddr 0x%016llx  endAddr 0x%016llx  wrAddr 0x%016llx  begin 0x%016llx.  Resetting",
              array, start, last, end, begin);
       const_cast<AmcCarrierBase*>(this)->reset(array);
       record.entries.resize(0);
@@ -247,7 +232,7 @@ Record*  AmcCarrierBase::get       (unsigned array,
       uint64_t nb      = last-begin+end-start;
       unsigned entries = nb/sizeof(Entry);
       if (entries > FAULTSIZE) {
-        printf("ERROR: AmcCarrierBase::get reading %u entries with wrap\n",entries);
+        syslog(LOG_ERR,"<E> AmcCarrierBase::get reading %u entries with wrap",entries);
       }
       end += sizeof(Entry)*entries - nb;
       record.entries.resize( entries );
@@ -261,7 +246,7 @@ Record*  AmcCarrierBase::get       (unsigned array,
     else {
       unsigned entries = (end -begin)/sizeof(Entry);
       if (entries > FAULTSIZE) {
-        printf("ERROR: AmcCarrierBase::get reading %u entries\n",entries);
+        syslog(LOG_ERR,"<E> AmcCarrierBase::get reading %u entries",entries);
       }
       if (entries) {
         end = begin+entries*sizeof(Entry);

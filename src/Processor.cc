@@ -8,6 +8,7 @@
 #include <queue>
 #include <stdio.h>
 #include <time.h>
+#include <syslog.h>
 
 #define DONE_WORKAROUND
 
@@ -17,7 +18,9 @@ static const unsigned MAXREADOUT = 1<<20;
 static char* timestr() 
 {
   time_t t = time(NULL);
-  return asctime(localtime(&t));
+  char* v = asctime(localtime(&t));
+  *strchr(v,'\n')=0; // strip the carriage return
+  return v;
 }
 
 namespace Bsa {
@@ -39,7 +42,7 @@ namespace Bsa {
     {
       //  Check if wrAddr pointer has moved.  If so, the acquisition isn't done
       if (state.wrAddr != _preset) {
-        printf("%s:  %s:%-4d [reset]: not ready 0x%016llx  wrAddr 0x%016llx\n",
+        syslog(LOG_WARNING,"<W> %s:  %s:%-4d [reset]: not ready 0x%016llx  wrAddr 0x%016llx",
                timestr(),__FILE__,__LINE__,_preset,state.wrAddr);
         return false;
       }
@@ -62,7 +65,7 @@ namespace Bsa {
       unsigned n0 = _last / sizeof(Entry);
       if (n0*sizeof(Entry) != _last) {
         const Entry& e = *reinterpret_cast<const Entry*>(_last);
-        printf("%s:  %s:%-4d [reset] misaligned _last 0x%016llx  nch %u  pid 0x%016llx\n",
+        syslog(LOG_WARNING,"<W> %s:  %s:%-4d [reset] misaligned _last 0x%016llx  nch %u  pid 0x%016llx",
                timestr(),__FILE__,__LINE__,_last,e.nchannels(),e.pulseId());
         return false;
       }
@@ -70,7 +73,7 @@ namespace Bsa {
       array.reset(timestamp>>32,timestamp&0xffffffff);
 
       uint64_t hw_done = hw.done();
-      printf("%s:  %s:%-4d []  array %u  _timestamp 0x%016llx  _next 0x%016llx  _last 0x%016llx  __end 0x%016llx  done 0x%016llx\n",
+      syslog(LOG_DEBUG,"<D> %s:  %s:%-4d []  array %u  _timestamp 0x%016llx  _next 0x%016llx  _last 0x%016llx  __end 0x%016llx  done 0x%016llx",
              timestr(),__FILE__,__LINE__,iarray,_timestamp,_next,_last,_end,hw_done);
 
       return true;
@@ -110,7 +113,7 @@ namespace Bsa {
       }
 
       if (n > MAXREADOUT) {
-        printf("ERROR: Reader::next allocating record with %u entries\n", n);
+        syslog(LOG_ERR,"<E> Reader::next allocating record with %u entries", n);
       }
 
       Record& record = _record;
@@ -122,13 +125,13 @@ namespace Bsa {
       unsigned n0 = _next / sizeof(Entry);
       if (n0*sizeof(Entry) != _next) {
         const Entry& e = record.entries[0];
-        printf("%s:  %s:%-4d [Misaligned record]  _next 0x%016llx  nch %u  pid 0x%016llx\n",
+        syslog(LOG_ERR,"<E> %s  %s:%-4d [Misaligned record]  _next 0x%016llx  nch %u  pid 0x%016llx",
                timestr(),__FILE__,__LINE__,_next,e.nchannels(),e.pulseId());
       }
       
       //  _last or _end dont occur at an Entry boundary
       if (_next + n*sizeof(Entry) != next) {
-        printf("%s:  %s:%-4d [Truncated record]  _next 0x%016llx  next 0x%016llx  _last 0x%016llx  _end 0x%016llx  _next+n 0x%016llx  n %u\n",
+        syslog(LOG_ERR,"<E> %s:  %s:%-4d [Truncated record]  _next 0x%016llx  next 0x%016llx  _last 0x%016llx  _end 0x%016llx  _next+n 0x%016llx  n %u",
                timestr(),__FILE__,__LINE__,_next,next,_last,_end,_next+n*sizeof(Entry),n);
       }
 
@@ -138,7 +141,7 @@ namespace Bsa {
         hw   .reset(array.array());
         array.set(_timestamp>>32, _timestamp&0xffffffff);
         uint64_t hw_done = hw.done();
-        printf("%s:%-4d [done]:  array %u  hw.done 0x%016llx\n",__FILE__,__LINE__,array.array(),hw_done);
+        syslog(LOG_DEBUG,"<D> %s:%-4d [done]:  array %u  hw.done 0x%016llx",__FILE__,__LINE__,array.array(),hw_done);
       }
 
       return &record;
@@ -248,10 +251,8 @@ int ProcessorImpl::update(PvArray& array)
   }
   else {  // >= HSTARRAY0
 
-#if 1
-    printf("%s:  %s:%-4d [current %d]: wrAddr %016llx  next %016llx  clear %u  wrap %u  nacq %u\n",
+    syslog(LOG_DEBUG,"<D> %s:  %s:%-4d [current %d]: wrAddr %016llx  next %016llx  clear %u  wrap %u  nacq %u",
            timestr(),__FILE__,__LINE__,iarray,current.wrAddr,current.next,current.clear,current.wrap,current.nacq);
-#endif
 
     unsigned ifltb = array.array()-HSTARRAY0;
     Reader& reader = _reader[ifltb];
