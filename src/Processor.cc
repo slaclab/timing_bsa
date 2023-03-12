@@ -64,9 +64,8 @@ namespace Bsa {
       //  Check if wrAddr is properly aligned to the record size.
       unsigned n0 = _last / sizeof(Entry);
       if (n0*sizeof(Entry) != _last) {
-        const Entry& e = *reinterpret_cast<const Entry*>(_last);
-        syslog(LOG_WARNING,"<W> %s:  %s:%-4d [reset] misaligned _last 0x%016llx  nch %u  pid 0x%016llx",
-               timestr(),__FILE__,__LINE__,_last,e.nchannels(),e.pulseId());
+        syslog(LOG_WARNING,"<W> %s:  %s:%-4d [reset] misaligned _last 0x%016llx",
+               timestr(),__FILE__,__LINE__,_last);
         return false;
       }
 
