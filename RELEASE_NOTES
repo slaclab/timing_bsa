@@ -1,3 +1,6 @@
+R2.2.0-1.1   03/13/2023  Kukhee Kim
+              - bug fixing in mis-aligment warning syslog
+
 R2.2.0-1.0   03/09/2023  Kukhee Kim
               - resolve double free issue to prevent ioc crash
               - debugging fault buffer bug, test workaround
