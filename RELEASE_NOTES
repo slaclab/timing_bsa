@@ -1,4 +1,6 @@
-
+R2.4.0       03/14/2023 Kukhee Kim
+             - merge R2.2.0-BSSS_BSA_upgrade branch
+             - bug fixing for double free issue and data corruption on the fault buffer
 
 
 merging R2.2.0-BSSS_BSA_upgrde branch into the master,    Mar 14, 2023,  Kukhee Kim
