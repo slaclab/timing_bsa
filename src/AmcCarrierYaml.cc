@@ -7,6 +7,8 @@
 #include <TPG.hh>
 #include <TPGMini.hh>
 
+#include <syslog.h>
+
 static uint64_t GET_U1(Path pre, unsigned nelms)
 {
   uint64_t r=0;
@@ -61,7 +63,7 @@ AmcCarrierYaml::AmcCarrierYaml(Path mmio,
   _trAddr    = IScalVal_RO::create( _bpath->findByName("TriggerAddr") );
   _memEnd    = 0;
 
-  printf("dram array is (%u,%llu)\n", _dram->getNelms(), _dram->getSizeBits());
+  syslog(LOG_DEBUG,"<D> dram array is (%u,%llu)", _dram->getNelms(), _dram->getSizeBits());
 }
 
 AmcCarrierYaml::~AmcCarrierYaml()
@@ -69,7 +71,7 @@ AmcCarrierYaml::~AmcCarrierYaml()
 }
 
 unsigned AmcCarrierYaml::nArrays   () const
-{ return 64; }
+{ return 48; }
 
 uint32_t AmcCarrierYaml::doneRaw   () const
 {
@@ -103,7 +105,7 @@ void     AmcCarrierYaml::initializ_(unsigned index,
   uint64_t pn = p+((bufferSize+BlockMask)&~BlockMask);
   uint32_t one(1), zero(0), mode(doneWhenFull ? 1:0);
   IndexRange rng(index%4);
-  printf("Setup waveform memory %i %llx:%llx\n", index, p,pn);
+  syslog(LOG_DEBUG,"<D> Setup waveform memory %i %llx:%llx", index, p,pn);
   IScalVal::create( path->findByName("StartAddr"))->setVal(&p   ,1,&rng);
   IScalVal::create( path->findByName("EndAddr"  ))->setVal(&pn  ,1,&rng);
   IScalVal::create( path->findByName("Enabled"  ))->setVal(&one ,1,&rng);

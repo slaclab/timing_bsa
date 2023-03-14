@@ -11,7 +11,7 @@
 namespace Bsss {
     class BsssYaml : public AcqService::AcqServiceYaml {
         public:
-            BsssYaml(Path bsss_path);
+            BsssYaml(Path bsss_path, uint32_t num_edef);
             virtual ~BsssYaml() {}
             
 

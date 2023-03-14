@@ -4,7 +4,7 @@
 using namespace Bld;
 
 BldYaml::BldYaml(Path bld_path)
-:AcqServiceYaml(bld_path, NUM_BLD_CHN)
+:AcqServiceYaml(bld_path, NUM_BLD_CHN, AcqService::bld)
 {
     for(int i = 0; i < _edef_num; i++) {
         char str_name[80];

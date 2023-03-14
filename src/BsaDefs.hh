@@ -5,6 +5,11 @@
 #include <vector>
 
 namespace Bsa {
+
+  enum { NBSAARRAYS =44 };
+  enum { HSTARRAY0  =44 };
+  enum { HSTARRAYN  =48 };
+
   class ChannelData {
   public:
     //  Arithmetic exception during accumulation
@@ -30,6 +35,8 @@ namespace Bsa {
   };
 
   class Record {
+  public:
+    Record(unsigned nreserve=1) { entries.reserve(nreserve); }
   public:
     unsigned  buffer;
     unsigned  time_secs;

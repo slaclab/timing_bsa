@@ -1,5 +1,41 @@
+
+
+
+merging R2.2.0-BSSS_BSA_upgrde branch into the master,    Mar 14, 2023,  Kukhee Kim
+
+
+
 R2.3.0       12/06/2022  Kukhee Kim
              - Merge branch 'last_timestamp' to resolve the BSA write-point exception
+
+R2.2.0-1.1   03/13/2023  Kukhee Kim
+              - bug fixing in mis-aligment warning syslog
+
+R2.2.0-1.0   03/09/2023  Kukhee Kim
+              - resolve double free issue to prevent ioc crash
+              - debugging fault buffer bug, test workaround
+              - fixing firmware bug for the fault buffer and clean up workaround
+              - using syslog for the debugging message
+
+R2.2.0-0.2   01/13/2023  Kukhee Kim
+              - Add throttled reader for fault buffer readout.  Buffer readouts are queued in the order seen by the thread.
+              - adjust number of Edefs to 48
+
+R2.2.0-0.1   12/14/2022  Kukhee Kim
+              - first test-ready version of BSSS_BSA_upgrade
+
+R2.2.0-0.0   12/06/2022  Kukhee Kim
+             - anchor for BSSS_BSA_upgrade
+             - merge last_timestamp branch
+
+R2.2.0-BSSS_BSA_upgrade
+             12/06/2022  Kukhe Kim
+             - Branch out from R2.2.0 to implement new BSSS/BSA requirements
+                . BSSS supports all of the BSA system EDEFs
+                . BSSS EDEFs are controlled by BSA system EDEFFs
+                . BSSS/BLD packet structure change to support the extended number of BSSS
+              - merge last_timestamp branch for BSA write-pointer issue
+
 
 R2.2.0       09/29/2022  Dawood Alnajjar
              - Refactored BsssYaml

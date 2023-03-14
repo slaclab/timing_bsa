@@ -24,6 +24,7 @@ namespace Bsa {
                         uint64_t end) const;
   public:
     void     initialize();
+    void     reset     (unsigned array);
     void     ackClear  (unsigned array);
     uint64_t inprogress() const;
     uint64_t done      () const;
@@ -49,6 +50,7 @@ namespace Bsa {
                          uint64_t empty, uint64_t error) const;
   protected:
     std::vector<ArrayState> _state;
+    mutable Record          _record;
     Path       _path;
     Path       _bpath;
     Path       _wpath0;
@@ -70,6 +72,8 @@ namespace Bsa {
     ScalVal_RO _trAddr;
     ScalVal_RO _dram;
     uint64_t   _memEnd;
+
+    friend class Reader;
   };
 };
 

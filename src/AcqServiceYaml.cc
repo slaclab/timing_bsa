@@ -31,13 +31,18 @@
 #define RATE_SEQ_NUM_MASK       0x1f      // seq num mask
 #define RATE_SEQ_NUM_BITLOC     4         // bit location for seq num
 
+#define BSSS_ONLY(X) \
+if(_type == bld) { printf("(%s: %d %s) is only for BSSS\n", __FILE__, __LINE__, __func__); return; }
+ 
+#define BLD_ONLY(X) \
+if(_type == bsss) { printf("(%s:%d %s) is only for BLD\n", __FILE__, __LINE__, __func__); return; }
 
 using namespace AcqService;
 
-AcqServiceYaml::AcqServiceYaml(Path AcqService_path, uint32_t edef_num)
+AcqServiceYaml::AcqServiceYaml(Path AcqService_path, uint32_t edef_num, serviceType_t type)
 {
     // Make sure no overflow will occur
-    assert ( edef_num <= MAX_EDEFS );
+    if(type == bld) assert ( edef_num <= MAX_EDEFS );
 
     _path        = AcqService_path;
     _packetSize  = IScalVal::create(_path->findByName("packetSize"));
@@ -56,6 +61,7 @@ AcqServiceYaml::AcqServiceYaml(Path AcqService_path, uint32_t edef_num)
     _eventSel0Rate   = IScalVal_RO::create(_path->findByName("eventSel0Rate"));
 
     _edef_num = edef_num;
+    _type     = type;
 
 }
 
@@ -112,18 +118,21 @@ void AcqServiceYaml::getEventSel0Rate(uint32_t *rate)
 
 void AcqServiceYaml::setDestInclusion(int chn, uint32_t dest_mask)
 {
+    BLD_ONLY();
     uint32_t destSel = (DEST_INCLUSION<<DEST_MODE_BITLOC) | (DEST_MASK & dest_mask);
     CPSW_TRY_CATCH(_EdefDestSel[chn]->setVal(destSel));
 }
 
 void AcqServiceYaml::setDestExclusion(int chn, uint32_t dest_mask)
 {
+    BLD_ONLY();
     uint32_t destSel = (DEST_EXCLUSION<<DEST_MODE_BITLOC) | (DEST_MASK & dest_mask);
     CPSW_TRY_CATCH(_EdefDestSel[chn]->setVal(destSel));
 }
 
 void AcqServiceYaml::setDestDisable(int chn)
 {
+    BLD_ONLY();
     uint32_t destSel = (DEST_DISABLE<<DEST_MODE_BITLOC);
     CPSW_TRY_CATCH(_EdefDestSel[chn]->setVal(destSel));
 }
@@ -131,6 +140,8 @@ void AcqServiceYaml::setDestDisable(int chn)
 
 void AcqServiceYaml::setFixedRate(int chn, uint32_t rate)
 {
+
+    BLD_ONLY();
     uint32_t rateSel = (RATE_FIXED<<RATE_MODE_BITLOC)
                        | (RATE_FIXED_MASK & rate);
     CPSW_TRY_CATCH(_EdefRateSel[chn]->setVal(rateSel));
@@ -138,6 +149,7 @@ void AcqServiceYaml::setFixedRate(int chn, uint32_t rate)
 
 void AcqServiceYaml::setACRate(int chn, uint32_t ts_mask, uint32_t rate)
 {
+    BLD_ONLY();
     uint32_t rateSel = (RATE_AC<<RATE_MODE_BITLOC)
                        | (RATE_AC_TS_MASK & ts_mask) << RATE_AC_TS_BITLOC
                        | (RATE_AC_MASK & rate);
@@ -146,6 +158,7 @@ void AcqServiceYaml::setACRate(int chn, uint32_t ts_mask, uint32_t rate)
 
 void AcqServiceYaml::setSeqRate(int chn, uint32_t seq_num, uint32_t seq_bit)
 {
+    BLD_ONLY();
     uint32_t rateSel = (RATE_SEQ<<RATE_MODE_BITLOC)
                        | (RATE_SEQ_NUM_MASK & seq_num) << RATE_SEQ_NUM_BITLOC
                        | (RATE_SEQ_MASK & seq_bit);
@@ -154,11 +167,19 @@ void AcqServiceYaml::setSeqRate(int chn, uint32_t seq_num, uint32_t seq_bit)
 
 void AcqServiceYaml::setRateLimit(int chn, uint32_t rate_limit)
 {
+    BLD_ONLY();
     CPSW_TRY_CATCH(_EdefRateLimit[chn]->setVal(rate_limit));
+}
+
+void AcqServiceYaml::setRateLimit(uint32_t rate_limit)
+{
+    BSSS_ONLY();
+    CPSW_TRY_CATCH(_EdefRateLimit[0]->setVal(rate_limit));
 }
 
 void AcqServiceYaml::setEdefEnable(int chn, uint32_t enable)
 {
+    BLD_ONLY();
     CPSW_TRY_CATCH(_EdefEnable[chn]->setVal(enable?(uint32_t) 1: (uint32_t) 0));
 }
 
