@@ -219,9 +219,8 @@ int ProcessorImpl::update(PvArray& array)
     // Fill channel data waveforms
     for(unsigned j=0; j<std::min(numChannelData, (const int&)array.pvs().size()); j++)
     {
-      // Adding new call to procChannelData() here that will do the partitioning of the channel data.
-      // Two new parameters are passed: the number of user-defined BSA channels (i.e. array.pvs.size())
-      // and a boolean to indicate if we are done sending all the channel data for the current pulse. 
+      // Adding new call to procChannelData() here that will do the extraction of the channel data.
+      // A boolean argument indicates if we are done sending all the channel data for the current pulse. 
       // Note the data are sent as 32-bit chunks and those are splitted as needed in the Asyn driver.
       array.procChannelData(entry.channel_data[j].n(),
                             entry.channel_data[j].mean(),
