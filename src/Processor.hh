@@ -9,6 +9,15 @@
 
 #include <cpsw_api_user.h>
 
+#define BLOCK_WIDTH_2   2
+#define BLOCK_WIDTH_16  16
+#define BLOCK_WIDTH_32  32
+
+#define KEEP_LSB_2    0x00000003 
+#define KEEP_LSB_16   0x0000ffff 
+#define DEFAULT_MASK  0xffffffff
+
+#define M_PI_DEGREES 180.0
 namespace Bsa {
   typedef enum {
     uint2,
