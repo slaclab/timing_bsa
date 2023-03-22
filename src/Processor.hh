@@ -12,13 +12,14 @@
 namespace Bsa {
   typedef enum {
     uint2,
-    int16,
     uint16,
     int32,
     uint32,
     uint64,
     float32,
-    fault
+    fault,
+    llrfAmp,
+    llrfPhase
   } bsaDataType_t;
   //
   //  Class that defines the interface from the BSA processor to a PV record
