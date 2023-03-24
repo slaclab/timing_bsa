@@ -7,7 +7,6 @@
 
 #include <cmath>
 #include <math.h>
-#include <tgmath.h>
 #include <queue>
 #include <stdio.h>
 #include <algorithm>
@@ -109,7 +108,7 @@ namespace Bsa {
     std::queue<unsigned> _readerQueue;
     bool                 _debug;
 
-    void procChannelData   (const Entry*, Pv*, Pv*, bool&);
+    void procChannelData   (const Entry*, Pv*, Pv*, bool&, bool);
     void llrfPerformChecks (const Bsa::Pv*, const Bsa::Pv*, int);
     void llrfCalcPhaseAmp  (signed short, signed short, double&, double&);
   };
@@ -145,7 +144,7 @@ uint64_t ProcessorImpl::pending()
 void ProcessorImpl::llrfPerformChecks(const Bsa::Pv* pv, const Bsa::Pv* pvN, int bitIndex)
 {
     // Check if channel pointers are nullptr
-//    if (pv == nullptr || pvN == nullptr)
+    if (pv == NULL || pvN == NULL)
     {
         printf("BsaPvArray::llrfPerformChecks(): ERROR - LLRF BSA channels are nullptr!!\n");
         printf("BsaPvArray::llrfPerformChecks(): ERROR - Check LLRF BSA channels!!\n");
@@ -174,22 +173,21 @@ void ProcessorImpl::llrfPerformChecks(const Bsa::Pv* pv, const Bsa::Pv* pvN, int
 
 void ProcessorImpl::llrfCalcPhaseAmp(signed short i, signed short q, double& amp, double& phase)
 {
-    // Calculate amplitude 
-//    amp = (!isnan(i) && !isnan(q))?sqrt(pow(i,2) + pow(q,2)):0.0;
+    // Calculate amplitude
+    amp = (!isnan(i) && !isnan(q))?sqrt(pow((double)i,2) + pow((double)q,2)):0.0;
     // Calculate phase
-//    phase = (!isnan(i) && !isnan(q) && i != 0)?atan2((double)q, (double)i) * M_PI_DEGREES / M_PI:0.0;
+    phase = (!isnan(i) && !isnan(q) && i != 0)?atan2((double)q, (double)i) * M_PI_DEGREES / M_PI:0.0;
 }
 
-void ProcessorImpl::procChannelData(const Entry* entry, Pv* pv, Pv* pvN, bool& skipNextPV)
+void ProcessorImpl::procChannelData(const Entry* entry, Pv* pv, Pv* pvN, bool& skipNextPV, bool done)
 {
     uint32_t mask = DEFAULT_MASK;
     uint32_t val = 0, iVal = 0, qVal = 0;
-    float    quant1float = 0.0, quant2float = 0.0;
     double   amp = 0.0, phase = 0.0, quant1 = 0.0, quant2 = 0.0;
 
     // Define useful indices
     static unsigned wordIndex = 0;
-
+    
     // Incoming data are 32-bits
     const unsigned wordWidth = BLOCK_WIDTH_32;
 
@@ -229,13 +227,13 @@ void ProcessorImpl::procChannelData(const Entry* entry, Pv* pv, Pv* pvN, bool& s
         // Compute phase & amplitude
         llrfCalcPhaseAmp(static_cast<signed short>(iVal),static_cast<signed short>(qVal),amp,phase);                
         // Append computed values to PVs
-        quant1 = (*type == llrfAmp)?amp:phase; quant1float = (float)quant1;
-        quant2 = (quant1 == amp   )?phase:amp; quant2float = (float)quant2;
+        quant1 = (*type == llrfAmp)?amp:phase;
+        quant2 = (quant1 == amp   )?phase:amp;
         pv->append  (entry->channel_data[wordIndex].n(), 
-                      quant1float,
+                     quant1,
                      entry->channel_data[wordIndex].rms2());
         pvN->append (entry->channel_data[wordIndex].n(), 
-                      quant2float,
+                     quant2,
                      entry->channel_data[wordIndex].rms2());
         skipNextPV = true;
         bitSum += 2 * BLOCK_WIDTH_16;
@@ -274,6 +272,10 @@ void ProcessorImpl::procChannelData(const Entry* entry, Pv* pv, Pv* pvN, bool& s
       printf("ProcessorImpl::procChannelData(): ERROR - Exiting ...\n");
       exit(EXIT_FAILURE);
     }
+
+    // Reset hardware channel index if done
+    if (done)
+      wordIndex = 0;
 }
 
 int ProcessorImpl::update(PvArray& array)
@@ -360,10 +362,10 @@ int ProcessorImpl::update(PvArray& array)
     array.append(entry.pulseId());
 
     // Fill channel data waveforms
-  
+/*
     // Method 1: Call Bsa::PvArray::procChannelData() 
     // Push data to a vector in bsaDriverand extract data in there
-    for(unsigned j=0; j<std::min(numChannelData, (const int&)array.pvs().size()); j++)
+    for(unsigned j = 0; j < std::min(numChannelData, (const int&)array.pvs().size()); j++)
     {
       // Adding new call to procChannelData() here that will do the extraction of the channel data.
       // A boolean argument indicates if we are done sending all the channel data for the current pulse. 
@@ -373,19 +375,18 @@ int ProcessorImpl::update(PvArray& array)
                             entry.channel_data[j].rms2(),
                             (j == std::min(numChannelData - 1, (const int&)array.pvs().size() - 1)));
     }
-
-/*
+*/
     // Method 2: Call ProcessorImpl::procChannelData() 
     // Loop over PVs, extract data from hardware channels and assign to PVs 
-    for(unsigned int j=0; j<array.pvs().size(); j++)
+    for(unsigned int j = 0; j < array.pvs().size(); j++)
     {
       // Call function to do the extraction
       Pv* pv  = pvs[j];
       Pv* pvN = ((j+1) < array.pvs().size())?pvs[j+1]:pv;
-      bool skip = false;procChannelData(&entry, pv, pvN, skip);
-      j = (skip)?j++:j;
+      bool skip = false;if (pv && pvN) procChannelData(&entry, pv, pvN, skip, j == (array.pvs().size() - 1));
+      j = (skip)?j+1:j;
     }
-*/
+
   }
 
   current.nacq += record->entries.size();
