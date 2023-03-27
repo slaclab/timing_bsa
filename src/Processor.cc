@@ -5,6 +5,8 @@
 
 #include <cpsw_api_builder.h>
 
+#include <cmath>
+#include <math.h>
 #include <queue>
 #include <stdio.h>
 #include <time.h>
@@ -13,6 +15,7 @@
 #define DONE_WORKAROUND
 
 #include <algorithm>
+#include <cstddef>
 
 static unsigned _nReadout = 1024 * 128;
 static const unsigned MAXREADOUT = 1<<20;
@@ -180,10 +183,15 @@ namespace Bsa {
     std::queue<unsigned> _readerQueue;
     bool                 _debug;
     Record               _emptyRecord;
+
+    void procChannelData   (const Entry*, Pv*, Pv*, bool&, bool);
+    void llrfPerformChecks (const Bsa::Pv*, const Bsa::Pv*, int);
+    void llrfCalcPhaseAmp  (signed short, signed short, double&, double&);
   };
 
 };
 
+using namespace std;
 using namespace Bsa;
 
 AmcCarrierBase *ProcessorImpl::getHardware()
@@ -207,6 +215,143 @@ uint64_t ProcessorImpl::pending()
   r &= done;
 
   return r;
+}
+
+void ProcessorImpl::llrfPerformChecks(const Bsa::Pv* pv, const Bsa::Pv* pvN, int bitIndex)
+{
+    // Check if channel pointers are nullptr
+    if (pv == NULL || pvN == NULL)
+    {
+        printf("BsaPvArray::llrfPerformChecks(): ERROR - LLRF BSA channels are nullptr!!\n");
+        printf("BsaPvArray::llrfPerformChecks(): ERROR - Check LLRF BSA channels!!\n");
+        printf("BsaPvArray::llrfPerformChecks(): ERROR - Exiting ...\n");
+        exit(EXIT_FAILURE);
+    }
+    // Ensure bit index points to the start of the channel
+    if (bitIndex != 0)
+    {
+        printf("BsaPvArray::llrfPerformChecks(): ERROR - LLRF BSA channel not aligned with LSB!!\n");
+        printf("BsaPvArray::llrfPerformChecks(): ERROR - Check LLRF BSA channel order!!\n");
+        printf("BsaPvArray::llrfPerformChecks(): ERROR - Exiting ...\n");
+        exit(EXIT_FAILURE);
+    }
+    // Ensure the types of consecutive channels are valid (phase->amp or amp->phase)
+    if ((*pv->get_p_type() == llrfAmp   && *pvN->get_p_type() == llrfPhase) ||
+        (*pv->get_p_type() == llrfPhase && *pvN->get_p_type() == llrfAmp  )   ){}
+    else
+    {
+        printf("BsaPvArray::llrfPerformChecks(): ERROR - Did NOT find consecutive Amplitude and Phase channels!!\n");
+        printf("BsaPvArray::llrfPerformChecks(): ERROR - Check LLRF BSA channel types!!\n");
+        printf("BsaPvArray::llrfPerformChecks(): ERROR - Exiting ...\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void ProcessorImpl::llrfCalcPhaseAmp(signed short i, signed short q, double& amp, double& phase)
+{
+    // Calculate amplitude
+    amp = (!isnan(i) && !isnan(q))?sqrt(pow((double)i,2) + pow((double)q,2)):0.0;
+    // Calculate phase
+    phase = (!isnan(i) && !isnan(q) && i != 0)?atan2((double)q, (double)i) * M_PI_DEGREES / M_PI:0.0;
+}
+
+void ProcessorImpl::procChannelData(const Entry* entry, Pv* pv, Pv* pvN, bool& skipNextPV, bool done)
+{
+    uint32_t mask = DEFAULT_MASK;
+    uint32_t val = 0, iVal = 0, qVal = 0;
+    double   amp = 0.0, phase = 0.0, quant1 = 0.0, quant2 = 0.0;
+
+    // Define useful indices
+    static unsigned wordIndex = 0;
+    
+    // Incoming data are 32-bits
+    const unsigned wordWidth = BLOCK_WIDTH_32;
+
+    // Keep track of bit boundaries
+    static unsigned bitSum = 0;
+
+    // Fault flag for bit boundaries
+    bool userFault = false;
+
+    // Get the data type of the PV (32-bit or less)
+    bsaDataType_t *type = pv->get_p_type();
+            
+    // Partition 32-bit data and distribute to new PVs as needed
+    switch(*type){
+      case uint2:
+        // Extract the 2-bit block
+        val = (uint32_t)entry->channel_data[wordIndex].mean();
+        mask = KEEP_LSB_2;val >>= bitSum;val &= mask;
+        bitSum += BLOCK_WIDTH_2;
+        break; 
+      case uint16:
+        // Extract the 16-bit block
+        val = (uint32_t)entry->channel_data[wordIndex].mean();
+        mask = KEEP_LSB_16;val >>= bitSum;val &= mask;
+        bitSum += BLOCK_WIDTH_16;
+        break;
+      case llrfAmp:
+      case llrfPhase:
+        // Perform checks to ensure type validity
+        llrfPerformChecks(const_cast<Bsa::Pv*>(pv),const_cast<Bsa::Pv*>(pvN),bitSum);
+        // Extract lower 16 bits
+        iVal = (uint32_t)entry->channel_data[wordIndex].mean();
+        mask = KEEP_LSB_16;iVal >>= bitSum;iVal &= mask;
+        // Extract upper 16 bits
+        qVal = (uint32_t)entry->channel_data[wordIndex].mean();
+        mask = KEEP_LSB_16;qVal >>= BLOCK_WIDTH_16;qVal &= mask;
+        // Compute phase & amplitude
+        llrfCalcPhaseAmp(static_cast<signed short>(iVal),static_cast<signed short>(qVal),amp,phase);                
+        // Append computed values to PVs
+        quant1 = (*type == llrfAmp)?amp:phase;
+        quant2 = (quant1 == amp   )?phase:amp;
+        pv->append  (entry->channel_data[wordIndex].n(), 
+                     quant1,
+                     entry->channel_data[wordIndex].rms2());
+        pvN->append (entry->channel_data[wordIndex].n(), 
+                     quant2,
+                     entry->channel_data[wordIndex].rms2());
+        skipNextPV = true;
+        bitSum += 2 * BLOCK_WIDTH_16;
+        break;
+      case int32:
+      case uint32:
+      case float32:
+      default:
+        // Send data as is (no partition required)
+        val = (uint32_t)entry->channel_data[wordIndex].mean();
+        bitSum += BLOCK_WIDTH_32;
+    }
+    // Append the value to the corresponding PV history
+    if (*type != llrfAmp && *type != llrfPhase)
+      pv->append(entry->channel_data[wordIndex].n(), 
+                 (double)val, 
+                 entry->channel_data[wordIndex].rms2());
+            
+    // Check if the 32-bit boundary has been violated
+    if (bitSum == wordWidth)
+    {
+      // All good, move on to the next 32-bit word
+      bitSum = 0;
+
+      // Incremenent index to next channel
+      wordIndex++;
+    }
+    else if (bitSum > wordWidth)
+      userFault = true;
+
+    // Maybe throw an exception in here later
+    if (userFault) 
+    {
+      printf("ProcessorImpl::procChannelData(): ERROR - Please ensure BSA channels do not violate 32-bit boundaries!!\n");
+      printf("ProcessorImpl::procChannelData(): ERROR - Check BSA channel type!!\n");
+      printf("ProcessorImpl::procChannelData(): ERROR - Exiting ...\n");
+      exit(EXIT_FAILURE);
+    }
+
+    // Reset hardware channel index if done
+    if (done)
+      wordIndex = 0;
 }
 
 int ProcessorImpl::update(PvArray& array)
@@ -298,7 +443,10 @@ int ProcessorImpl::update(PvArray& array)
     array.append(entry.pulseId());
 
     // Fill channel data waveforms
-    for(unsigned j=0; j<std::min(numChannelData, (const int&)array.pvs().size()); j++)
+/*
+    // Method 1: Call Bsa::PvArray::procChannelData() 
+    // Push data to a vector in bsaDriverand extract data in there
+    for(unsigned j = 0; j < std::min(numChannelData, (const int&)array.pvs().size()); j++)
     {
       // Adding new call to procChannelData() here that will do the extraction of the channel data.
       // A boolean argument indicates if we are done sending all the channel data for the current pulse. 
@@ -307,6 +455,17 @@ int ProcessorImpl::update(PvArray& array)
                             entry.channel_data[j].mean(),
                             entry.channel_data[j].rms2(),
                             (j == std::min(numChannelData - 1, (const int&)array.pvs().size() - 1)));
+    }
+*/
+    // Method 2: Call ProcessorImpl::procChannelData() 
+    // Loop over PVs, extract data from hardware channels and assign to PVs 
+    for(unsigned int j = 0; j < array.pvs().size(); j++)
+    {
+      // Call function to do the extraction
+      Pv* pv  = pvs[j];
+      Pv* pvN = ((j+1) < array.pvs().size())?pvs[j+1]:pv;
+      bool skip = false;if (pv && pvN) procChannelData(&entry, pv, pvN, skip, j == (array.pvs().size() - 1));
+      j = (skip)?j+1:j;
     }
   }
 
