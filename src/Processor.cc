@@ -386,7 +386,6 @@ int ProcessorImpl::update(PvArray& array)
       bool skip = false;if (pv && pvN) procChannelData(&entry, pv, pvN, skip, j == (array.pvs().size() - 1));
       j = (skip)?j+1:j;
     }
-
   }
 
   current.nacq += record->entries.size();
