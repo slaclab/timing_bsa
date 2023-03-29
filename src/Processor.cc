@@ -257,22 +257,15 @@ void ProcessorImpl::llrfCalcPhaseAmp(signed short i, signed short q, double& amp
 
 void ProcessorImpl::procChannelData(const Entry* entry, Pv* pv, Pv* pvN, bool& skipNextPV, bool done)
 {
-    uint32_t mask = DEFAULT_MASK;
-    uint32_t val = 0, iVal = 0, qVal = 0;
-    double   amp = 0.0, phase = 0.0, quant1 = 0.0, quant2 = 0.0;
-
-    // Define useful indices
-    static unsigned wordIndex = 0;
-    
-    // Incoming data are 32-bits
-    const unsigned wordWidth = BLOCK_WIDTH_32;
+    uint32_t mask, val, iVal, qVal;
+    double   amp, phase, quant1, quant2;
 
     // Keep track of bit boundaries
     static unsigned bitSum = 0;
 
-    // Fault flag for bit boundaries
-    bool userFault = false;
-
+    // Keep track of hardware channel index
+    static unsigned wordIndex = 0;
+    
     // Get the data type of the PV (32-bit or less)
     bsaDataType_t *type = pv->get_p_type();
             
@@ -329,19 +322,14 @@ void ProcessorImpl::procChannelData(const Entry* entry, Pv* pv, Pv* pvN, bool& s
                  entry->channel_data[wordIndex].rms2());
             
     // Check if the 32-bit boundary has been violated
-    if (bitSum == wordWidth)
+    if (bitSum == BLOCK_WIDTH_32)
     {
       // All good, move on to the next 32-bit word
       bitSum = 0;
-
-      // Incremenent index to next channel
+      // Increment index to next channel
       wordIndex++;
     }
-    else if (bitSum > wordWidth)
-      userFault = true;
-
-    // Maybe throw an exception in here later
-    if (userFault) 
+    else if (bitSum > BLOCK_WIDTH_32)
     {
       printf("ProcessorImpl::procChannelData(): ERROR - Please ensure BSA channels do not violate 32-bit boundaries!!\n");
       printf("ProcessorImpl::procChannelData(): ERROR - Check BSA channel type!!\n");
@@ -349,15 +337,16 @@ void ProcessorImpl::procChannelData(const Entry* entry, Pv* pv, Pv* pvN, bool& s
       exit(EXIT_FAILURE);
     }
 
-    // Reset hardware channel index if done
-    if (done)
-      wordIndex = 0;
+    // Reset hardware channel index if done with all hardware channels
+    wordIndex = (done)?0:wordIndex;
 }
 
 int ProcessorImpl::update(PvArray& array)
 {
-  unsigned      iarray = array.array();
-  std::vector<Pv*> pvs = array.pvs();
+  unsigned      iarray  = array.array();
+  std::vector<Pv*> pvs  = array.pvs();
+  unsigned    numOfPVs  = pvs.size();
+
   ArrayState current(_hw.state(iarray));
 
   Record* record;
@@ -434,7 +423,9 @@ int ProcessorImpl::update(PvArray& array)
     }
   }
 
-  for(unsigned i=0; i<record->entries.size(); i++) 
+  unsigned numOfEntries = record->entries.size();
+  
+  for(unsigned i = 0; i < numOfEntries; i++) 
   {
     // Process next entry (i.e. pulse ID)
     const Entry& entry = record->entries[i];
@@ -445,8 +436,8 @@ int ProcessorImpl::update(PvArray& array)
     // Fill channel data waveforms
 /*
     // Method 1: Call Bsa::PvArray::procChannelData() 
-    // Push data to a vector in bsaDriverand extract data in there
-    for(unsigned j = 0; j < std::min(numChannelData, (const int&)array.pvs().size()); j++)
+    // Push data to a vector in bsaDriver and extract data in there
+    for(unsigned j = 0; j < std::min(numChannelData, (const int&)numOfPVs); j++)
     {
       // Adding new call to procChannelData() here that will do the extraction of the channel data.
       // A boolean argument indicates if we are done sending all the channel data for the current pulse. 
@@ -454,22 +445,22 @@ int ProcessorImpl::update(PvArray& array)
       array.procChannelData(entry.channel_data[j].n(),
                             entry.channel_data[j].mean(),
                             entry.channel_data[j].rms2(),
-                            (j == std::min(numChannelData - 1, (const int&)array.pvs().size() - 1)));
+                            (j == std::min(numChannelData - 1, (const int&)numOfPVs - 1)));
     }
 */
     // Method 2: Call ProcessorImpl::procChannelData() 
     // Loop over PVs, extract data from hardware channels and assign to PVs 
-    for(unsigned int j = 0; j < array.pvs().size(); j++)
+    for(unsigned int j = 0; j < numOfPVs; j++)
     {
       // Call function to do the extraction
-      Pv* pv  = pvs[j];
-      Pv* pvN = ((j+1) < array.pvs().size())?pvs[j+1]:pv;
-      bool skip = false;if (pv && pvN) procChannelData(&entry, pv, pvN, skip, j == (array.pvs().size() - 1));
+      Pv* pv  = pvs[j]; bool skip = false;
+      Pv* pvN = ((j+1) < numOfPVs)?pvs[j+1]:pv;
+      if (pv && pvN) procChannelData(&entry, pv, pvN, skip, j == (numOfPVs - 1));
       j = (skip)?j+1:j;
     }
   }
 
-  current.nacq += record->entries.size();
+  current.nacq += numOfEntries;
   _state[iarray] = current;
   return current.nacq;
 }
