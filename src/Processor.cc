@@ -269,7 +269,7 @@ float atan2_approximation3( float y, float x )
     // Calculate the arctangent in the first quadrant
     float bxy_a = ::fabs( b * x * y );
     float num = bxy_a + y * y;
-    float atan_1q =  num / ( x * x + bxy_a + num );
+    float atan_1q =  num / ( x * x + bxy_a + num + (float).0001 );
 
     // Translate it to the proper quadrant
     uint32_t uatan_2q = (ux_s ^ uy_s) | (uint32_t &)atan_1q;
