@@ -184,9 +184,11 @@ namespace Bsa {
     bool                 _debug;
     Record               _emptyRecord;
 
+    float fastArcTan           (double x);
     float atan2_approximation1 (float y, float x);
     float atan2_approximation2 (float y, float x);
     float atan2_approximation3 (float y, float x);
+    float atan2_approximation4 (float y, float x);
     
     void  procChannelData      (const Entry*, Pv*, Pv*, bool&, bool);
     void  llrfPerformChecks    (const Bsa::Pv*, const Bsa::Pv*, int);
@@ -264,7 +266,7 @@ float atan2_approximation3( float y, float x )
     uint32_t uy_s  = sign_mask & (uint32_t &)y;
 
     // Determine the quadrant offset
-    float q = (float)( ( ~ux_s & uy_s ) >> 29 | ux_s >> 30 ); 
+    float q = (float)( ( ~ux_s & uy_s ) >> 29 | ux_s >> 30 );
 
     // Calculate the arctangent in the first quadrant
     float bxy_a = ::fabs( b * x * y );
@@ -275,6 +277,45 @@ float atan2_approximation3( float y, float x )
     uint32_t uatan_2q = (ux_s ^ uy_s) | (uint32_t &)atan_1q;
     return (q + (float &)uatan_2q) * M_PI;
 } 
+
+double fastArcTan(double x) 
+{
+  return M_PI_4 * x - x * (fabs(x) - 1) * (0.2447 + 0.0663 * fabs(x));
+}
+
+double atan2_approximation4(double y, double x) 
+{
+    if (x >= 0) { // -pi/2 .. pi/2
+        if (y >= 0) { // 0 .. pi/2
+            if (y < x) { // 0 .. pi/4
+                return fastArcTan(y / x);
+            } 
+            else { // pi/4 .. pi/2
+                return M_PI_2 - fastArcTan(x / y);
+            }
+        } else {
+              if (-y < x) { // -pi/4 .. 0
+                  return fastArcTan(y / x);
+              } else { // -pi/2 .. -pi/4
+                  return -M_PI_2 - fastArcTan(x / y);
+              }
+        }
+    } else { // -pi..-pi/2, pi/2..pi
+        if (y >= 0) { // pi/2 .. pi
+            if (y < -x) { // pi*3/4 .. pi
+                return fastArcTan(y / x) + M_PI;
+            } else { // pi/2 .. pi*3/4
+                return M_PI_2 - fastArcTan(x / y);
+            }
+        } else { // -pi .. -pi/2
+            if (-y < -x) { // -pi .. -pi*3/4
+                return fastArcTan(y / x) - M_PI;
+            }else { // -pi*3/4 .. -pi/2
+                return -M_PI_2 - fastArcTan(x / y);
+            }
+        }
+    }
+}
 
 void ProcessorImpl::llrfPerformChecks(const Bsa::Pv* pv, const Bsa::Pv* pvN, int bitIndex)
 {
@@ -309,7 +350,6 @@ void ProcessorImpl::llrfPerformChecks(const Bsa::Pv* pv, const Bsa::Pv* pvN, int
 void ProcessorImpl::llrfCalcPhaseAmp(signed short i, signed short q, double& amp, double& phase)
 {
     // Calculate amplitude
-    //amp = (!isnan(i) && !isnan(q))?sqrt(pow((double)i,2) + pow((double)q,2)):0.0;
     amp = (!isnan(i) && !isnan(q))?sqrt((double)(i * i) + (double)(q * q)):0.0;
     // Calculate phase
     phase = (!isnan(i) && !isnan(q) && i != 0)?atan2((double)q, (double)i) * M_PI_DEGREES / M_PI:0.0;
@@ -356,10 +396,8 @@ void ProcessorImpl::procChannelData(const Entry* entry, Pv* pv, Pv* pvN, bool& s
         // Extract upper 16 bits
         qVal = static_cast<signed short>((val >> BLOCK_WIDTH_16) & mask);  
         // Compute phase & amplitude
-        //amp   = (!isnan(iVal) && !isnan(qVal))?sqrt(pow((double)iVal,2) + pow((double)qVal,2)):0.0;
         amp   = (!isnan(iVal) && !isnan(qVal))?sqrt((double)(iVal * iVal) + (double)(qVal * qVal)):0.0;
-        //phase = (!isnan(iVal) && !isnan(qVal) && iVal != 0)?atan2((double)qVal, (double)iVal) * M_PI_DEGREES / M_PI:0.0;
-        phase = (!isnan(iVal) && !isnan(qVal) && iVal != 0)?(double)atan2_approximation1((float)qVal, (float)iVal) * M_PI_DEGREES / M_PI:0.0;
+        phase = (!isnan(iVal) && !isnan(qVal) && iVal != 0)?(double)atan2_approximation3((float)qVal, (float)iVal) * M_PI_DEGREES / M_PI:0.0;
         // Append computed values to PVs
         quant1 = (*type == llrfAmp)?amp:phase;
         quant2 = (quant1 == amp   )?phase:amp;

@@ -18,6 +18,7 @@
 #define DEFAULT_MASK  0xffffffff
 
 #define M_PI_DEGREES 180.0
+
 namespace Bsa {
   typedef enum {
     uint2,
