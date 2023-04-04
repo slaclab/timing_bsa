@@ -184,9 +184,10 @@ namespace Bsa {
     bool                 _debug;
     Record               _emptyRecord;
 
-    void procChannelData   (const Entry*, Pv*, Pv*, bool&, bool);
-    void llrfPerformChecks (const Bsa::Pv*, const Bsa::Pv*, int);
-    void llrfCalcPhaseAmp  (signed short, signed short, double&, double&);
+    float atan2_approximation1 (float y, float x);
+    void  procChannelData      (const Entry*, Pv*, Pv*, bool&, bool);
+    void  llrfPerformChecks    (const Bsa::Pv*, const Bsa::Pv*, int);
+    void  llrfCalcPhaseAmp     (signed short, signed short, double&, double&);
   };
 
 };
@@ -217,6 +218,29 @@ uint64_t ProcessorImpl::pending()
   return r;
 }
 
+float ProcessorImpl::atan2_approximation1(float y, float x)
+{
+    const float ONEQTR_PI = M_PI / 4.0;
+    const float THRQTR_PI = 3.0 * M_PI / 4.0;
+    float r, angle;
+    float abs_y = fabs(y) + 1e-10f;      // kludge to prevent 0/0 condition
+    if ( x < 0.0f )
+    {
+        r = (x + abs_y) / (abs_y - x);
+        angle = THRQTR_PI;
+    }
+    else
+    {
+        r = (x - abs_y) / (x + abs_y);
+        angle = ONEQTR_PI;
+    }
+    angle += (0.1963f * r * r - 0.9817f) * r;
+    if ( y < 0.0f )
+        return( -angle );     // negate if in quad III or IV
+    else
+        return( angle );
+}
+    
 void ProcessorImpl::llrfPerformChecks(const Bsa::Pv* pv, const Bsa::Pv* pvN, int bitIndex)
 {
     // Check if channel pointers are nullptr
@@ -296,8 +320,10 @@ void ProcessorImpl::procChannelData(const Entry* entry, Pv* pv, Pv* pvN, bool& s
         // Extract upper 16 bits
         qVal = static_cast<signed short>((val >> BLOCK_WIDTH_16) & mask);  
         // Compute phase & amplitude
-        amp   = (!isnan(iVal) && !isnan(qVal))?sqrt(pow((double)iVal,2) + pow((double)qVal,2)):0.0;
-        phase = (!isnan(iVal) && !isnan(qVal) && iVal != 0)?atan2((double)qVal, (double)iVal) * M_PI_DEGREES / M_PI:0.0;
+        //amp   = (!isnan(iVal) && !isnan(qVal))?sqrt(pow((double)iVal,2) + pow((double)qVal,2)):0.0;
+        amp   = (!isnan(iVal) && !isnan(qVal))?sqrt((double)(iVal * iVal) + (double)(qVal * qVal)):0.0;
+        //phase = (!isnan(iVal) && !isnan(qVal) && iVal != 0)?atan2((double)qVal, (double)iVal) * M_PI_DEGREES / M_PI:0.0;
+        phase = (!isnan(iVal) && !isnan(qVal) && iVal != 0)?(double)atan2_approximation1((float)qVal, (float)iVal) * M_PI_DEGREES / M_PI:0.0;
         // Append computed values to PVs
         quant1 = (*type == llrfAmp)?amp:phase;
         quant2 = (quant1 == amp   )?phase:amp;
