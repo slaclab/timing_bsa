@@ -185,6 +185,7 @@ namespace Bsa {
     Record               _emptyRecord;
 
     float atan2_approximation1 (float y, float x);
+    float atan2_approximation2 (float y, float x);
     void  procChannelData      (const Entry*, Pv*, Pv*, bool&, bool);
     void  llrfPerformChecks    (const Bsa::Pv*, const Bsa::Pv*, int);
     void  llrfCalcPhaseAmp     (signed short, signed short, double&, double&);
@@ -240,7 +241,17 @@ float ProcessorImpl::atan2_approximation1(float y, float x)
     else
         return( angle );
 }
-    
+
+float atan2_approximation2(float y, float x) 
+{
+    float abs_y = std::fabs(y) + 1e-10f;      // kludge to prevent 0/0 condition
+    float r = (x - copysign(abs_y, x)) / (abs_y + std::fabs(x));
+    float angle = M_PI/2.f - copysign(M_PI/4.f, x);
+
+    angle += (0.1963f * r * r - 0.9817f) * r;
+    return copysign(angle, y);
+}
+
 void ProcessorImpl::llrfPerformChecks(const Bsa::Pv* pv, const Bsa::Pv* pvN, int bitIndex)
 {
     // Check if channel pointers are nullptr
@@ -274,7 +285,8 @@ void ProcessorImpl::llrfPerformChecks(const Bsa::Pv* pv, const Bsa::Pv* pvN, int
 void ProcessorImpl::llrfCalcPhaseAmp(signed short i, signed short q, double& amp, double& phase)
 {
     // Calculate amplitude
-    amp = (!isnan(i) && !isnan(q))?sqrt(pow((double)i,2) + pow((double)q,2)):0.0;
+    //amp = (!isnan(i) && !isnan(q))?sqrt(pow((double)i,2) + pow((double)q,2)):0.0;
+    amp = (!isnan(i) && !isnan(q))?sqrt((double)(i * i) + (double)(q * q)):0.0;
     // Calculate phase
     phase = (!isnan(i) && !isnan(q) && i != 0)?atan2((double)q, (double)i) * M_PI_DEGREES / M_PI:0.0;
 }
