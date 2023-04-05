@@ -246,8 +246,8 @@ Record*  AmcCarrierBase::get       (unsigned array,
     else {
       unsigned entries = (end -begin)/sizeof(Entry);
       if (entries > FAULTSIZE) {
-        syslog(LOG_ERR,"<E> AmcCarrierBase::get reading %u entries (begin 0x%016llx, end 0x%016llx)",
-               entries, begin, end);
+        syslog(LOG_ERR,"<E> AmcCarrierBase::get reading %u entries (array (%u), begin 0x%016llx, end 0x%016llx)",
+               entries, array, begin, end);
       }
       if (entries) {
         end = begin+entries*sizeof(Entry);
