@@ -7,6 +7,7 @@
 
 #include <cmath>
 #include <math.h>
+#include <ctime>
 #include <queue>
 #include <stdio.h>
 #include <time.h>
@@ -184,7 +185,7 @@ namespace Bsa {
     bool                 _debug;
     Record               _emptyRecord;
 
-    float fastArcTan           (double x);
+    float fastArcTan           (float x);
     float atan2_approximation1 (float y, float x);
     float atan2_approximation2 (float y, float x);
     float atan2_approximation3 (float y, float x);
@@ -246,7 +247,7 @@ float ProcessorImpl::atan2_approximation1(float y, float x)
         return( angle );
 }
 
-float atan2_approximation2(float y, float x) 
+float ProcessorImpl::atan2_approximation2(float y, float x) 
 {
     float abs_y = std::fabs(y) + 1e-10f;      // kludge to prevent 0/0 condition
     float r = (x - copysign(abs_y, x)) / (abs_y + std::fabs(x));
@@ -256,7 +257,7 @@ float atan2_approximation2(float y, float x)
     return copysign(angle, y);
 }
 
-float atan2_approximation3( float y, float x )
+float ProcessorImpl::atan2_approximation3( float y, float x )
 {
     static const uint32_t sign_mask = 0x80000000;
     static const float b = 0.596227f;
@@ -278,12 +279,12 @@ float atan2_approximation3( float y, float x )
     return (q + (float &)uatan_2q) * M_PI;
 } 
 
-double fastArcTan(double x) 
+float ProcessorImpl::fastArcTan(float x) 
 {
   return M_PI_4 * x - x * (fabs(x) - 1) * (0.2447 + 0.0663 * fabs(x));
 }
 
-double atan2_approximation4(double y, double x) 
+float ProcessorImpl::atan2_approximation4(float y, float x) 
 {
     if (x >= 0) { // -pi/2 .. pi/2
         if (y >= 0) { // 0 .. pi/2
@@ -396,8 +397,24 @@ void ProcessorImpl::procChannelData(const Entry* entry, Pv* pv, Pv* pvN, bool& s
         // Extract upper 16 bits
         qVal = static_cast<signed short>((val >> BLOCK_WIDTH_16) & mask);  
         // Compute phase & amplitude
+        //clock_t timestamp1, timestamp2, timestamp3;
+        //static double maxAmpTime = 0.0;
+        //static double maxPhsTime = 0.0;
+        //timestamp1 = clock();
         amp   = (!isnan(iVal) && !isnan(qVal))?sqrt((double)(iVal * iVal) + (double)(qVal * qVal)):0.0;
-        phase = (!isnan(iVal) && !isnan(qVal) && iVal != 0)?(double)atan2_approximation3((float)qVal, (float)iVal) * M_PI_DEGREES / M_PI:0.0;
+        //timestamp2 = clock();
+        phase = (!isnan(iVal) && !isnan(qVal) && iVal != 0)?(double)atan2_approximation4((float)qVal, (float)iVal) * M_PI_DEGREES / M_PI:0.0;
+        //timestamp3 = clock();
+        //if (maxAmpTime < (double)(timestamp2 - timestamp1)/(double)(CLOCKS_PER_SEC/1.0e+06))
+        //{
+        //    maxAmpTime = (double)(timestamp2 - timestamp1)/(double)(CLOCKS_PER_SEC/1.0e+06);
+        //    printf("Amplitude calculation time = %f us\n", maxAmpTime);
+        //}
+        //if (maxPhsTime < (double)(timestamp3 - timestamp2)/(double)(CLOCKS_PER_SEC/1.0e+06))
+        //{
+        //    maxPhsTime = (double)(timestamp3 - timestamp2)/(double)(CLOCKS_PER_SEC/1.0e+06);
+        //    printf("Phase calculation time     = %f us\n", maxPhsTime);
+        //}
         // Append computed values to PVs
         quant1 = (*type == llrfAmp)?amp:phase;
         quant2 = (quant1 == amp   )?phase:amp;
