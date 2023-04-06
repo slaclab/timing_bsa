@@ -397,24 +397,8 @@ void ProcessorImpl::procChannelData(const Entry* entry, Pv* pv, Pv* pvN, bool& s
         // Extract upper 16 bits
         qVal = static_cast<signed short>((val >> BLOCK_WIDTH_16) & mask);  
         // Compute phase & amplitude
-        //clock_t timestamp1, timestamp2, timestamp3;
-        //static double maxAmpTime = 0.0;
-        //static double maxPhsTime = 0.0;
-        //timestamp1 = clock();
         amp   = (!isnan(iVal) && !isnan(qVal))?sqrt((double)(iVal * iVal) + (double)(qVal * qVal)):0.0;
-        //timestamp2 = clock();
         phase = (!isnan(iVal) && !isnan(qVal) && iVal != 0)?(double)atan2_approximation4((float)qVal, (float)iVal) * M_PI_DEGREES / M_PI:0.0;
-        //timestamp3 = clock();
-        //if (maxAmpTime < (double)(timestamp2 - timestamp1)/(double)(CLOCKS_PER_SEC/1.0e+06))
-        //{
-        //    maxAmpTime = (double)(timestamp2 - timestamp1)/(double)(CLOCKS_PER_SEC/1.0e+06);
-        //    printf("Amplitude calculation time = %f us\n", maxAmpTime);
-        //}
-        //if (maxPhsTime < (double)(timestamp3 - timestamp2)/(double)(CLOCKS_PER_SEC/1.0e+06))
-        //{
-        //    maxPhsTime = (double)(timestamp3 - timestamp2)/(double)(CLOCKS_PER_SEC/1.0e+06);
-        //    printf("Phase calculation time     = %f us\n", maxPhsTime);
-        //}
         // Append computed values to PVs
         quant1 = (*type == llrfAmp)?amp:phase;
         quant2 = (quant1 == amp   )?phase:amp;
