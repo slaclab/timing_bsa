@@ -1,3 +1,8 @@
+R2.5.0       04/10/2023 Kukhee Kim
+             - fix wraparound flag issue
+               ignore firmware wraparound flag, and software decide to handle the wraparound condition
+               without the wraparound flag, to resolve bss fault on BPM application and waiting long time until back to normal 
+
 R2.4.0       03/14/2023 Kukhee Kim
              - merge R2.2.0-BSSS_BSA_upgrade branch
              - bug fixing for double free issue and data corruption on the fault buffer
