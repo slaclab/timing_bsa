@@ -1,7 +1,8 @@
 
-branch out to merge_llrf_bsa from the master,            Mar 15, 2023, Kukhee Kim
-             - we are going to merge LLRF_BSA_SKOUFIS branch
-
+R2.5.0       04/10/2023 Kukhee Kim
+             - fix wraparound flag issue
+               ignore firmware wraparound flag, and software decide to handle the wraparound condition
+               without the wraparound flag, to resolve bss fault on BPM application and waiting long time until back to normal 
 
 
 R2.4.0       03/14/2023 Kukhee Kim

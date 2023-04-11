@@ -228,9 +228,11 @@ Record*  AmcCarrierBase::get       (unsigned array,
       begin = last;
 
     _sFull->getVal(&wrap     ,1,&rng);
-    if (end <= begin && wrap) {
+    if (end <= begin /*&& wrap*/) {
       uint64_t nb      = last-begin+end-start;
       unsigned entries = nb/sizeof(Entry);
+
+      if(!wrap) syslog(LOG_ERR, "<E> AmccCarrierBsae::get (Warp flag issue) reading %u entries (array (%u), begin 0x%016llx, end 0x%016llx)", entries, array, begin, end);
       if (entries > FAULTSIZE) {
         syslog(LOG_ERR,"<E> AmcCarrierBase::get reading %u entries with wrap",entries);
       }
@@ -246,7 +248,8 @@ Record*  AmcCarrierBase::get       (unsigned array,
     else {
       unsigned entries = (end -begin)/sizeof(Entry);
       if (entries > FAULTSIZE) {
-        syslog(LOG_ERR,"<E> AmcCarrierBase::get reading %u entries",entries);
+        syslog(LOG_ERR,"<E> AmcCarrierBase::get reading %u entries (array (%u), begin 0x%016llx, end 0x%016llx)",
+               entries, array, begin, end);
       }
       if (entries) {
         end = begin+entries*sizeof(Entry);
