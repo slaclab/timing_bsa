@@ -260,6 +260,7 @@ void ProcessorImpl::procChannelData(const Entry* entry, Pv* pv, Pv* pvN, bool& s
 {
     uint32_t       mask, val;
     float          iVal, qVal;
+    bool           appendNAN;
     double         amp, phase, quant1, quant2;
 
     // Keep track of bit boundaries
@@ -272,17 +273,28 @@ void ProcessorImpl::procChannelData(const Entry* entry, Pv* pv, Pv* pvN, bool& s
     bsaDataType_t *type = pv->get_p_type();
             
     // Partition 32-bit data and distribute to new PVs as needed
+    appendNAN = false;
     switch(*type){
       case uint2:
         // Extract the 2-bit block
-        val = (uint32_t)entry->channel_data[wordIndex].mean();
-        mask = KEEP_LSB_2;val >>= bitSum;val &= mask;
+        if (!isnan(entry->channel_data[wordIndex].mean()))
+        {
+          val = (uint32_t)entry->channel_data[wordIndex].mean();
+          mask = KEEP_LSB_2;val >>= bitSum;val &= mask;
+        }
+        else
+          appendNAN = true;
         bitSum += BLOCK_WIDTH_2;
         break; 
       case uint16:
         // Extract the 16-bit block
-        val = (uint32_t)entry->channel_data[wordIndex].mean();
-        mask = KEEP_LSB_16;val >>= bitSum;val &= mask;
+        if (!isnan(entry->channel_data[wordIndex].mean()))
+        {
+          val = (uint32_t)entry->channel_data[wordIndex].mean();
+          mask = KEEP_LSB_16;val >>= bitSum;val &= mask;
+        }
+        else
+          appendNAN = true;
         bitSum += BLOCK_WIDTH_16;
         break;
       case llrfAmp:
@@ -324,15 +336,22 @@ void ProcessorImpl::procChannelData(const Entry* entry, Pv* pv, Pv* pvN, bool& s
       case float32:
       default:
         // Send data as is (no partition required)
-        val = (uint32_t)entry->channel_data[wordIndex].mean();
+        if (!isnan(entry->channel_data[wordIndex].mean()))
+          val = (uint32_t)entry->channel_data[wordIndex].mean();
+        else
+          appendNAN = true;
         bitSum += BLOCK_WIDTH_32;
     }
-    // Append the value to the corresponding PV history
-    if (*type != llrfAmp && *type != llrfPhase)
+    // Append the value to the corresponding PV history buffer      
+    if (*type != llrfAmp && *type != llrfPhase && !appendNAN)
       pv->append(entry->channel_data[wordIndex].n(), 
                  (double)val, 
                  entry->channel_data[wordIndex].rms2());
-            
+    else if (*type != llrfAmp && *type != llrfPhase && appendNAN)
+      pv->append(entry->channel_data[wordIndex].n(), 
+                 NAN, 
+                 entry->channel_data[wordIndex].rms2());
+
     // Check if the 32-bit boundary has been violated
     if (bitSum == BLOCK_WIDTH_32)
     {
