@@ -187,7 +187,7 @@ namespace Bsa {
 
     void  procChannelData      (const Entry*, Pv*, Pv*, bool&, bool);
     void  llrfPerformChecks    (const Bsa::Pv*, const Bsa::Pv*, int);
-    void  llrfCalcPhaseAmp     (signed short, signed short, double&, double&);
+    void  llrfCalcPhaseAmp     (float, float, double&, double&);
   };
 
 };
@@ -248,19 +248,19 @@ void ProcessorImpl::llrfPerformChecks(const Bsa::Pv* pv, const Bsa::Pv* pvN, int
     }
 }
 
-void ProcessorImpl::llrfCalcPhaseAmp(signed short i, signed short q, double& amp, double& phase)
+void ProcessorImpl::llrfCalcPhaseAmp(float i, float q, double& amp, double& phase)
 {
     // Calculate amplitude
-    amp = (!isnan(i) && !isnan(q))?sqrt((double)(i * i) + (double)(q * q)):0.0;
+    amp = (!isnan(i) && !isnan(q) && (i != 0))?sqrt((double)(i) * (double)(i) + (double)(q) * (double)(q)):NAN;
     // Calculate phase
-    phase = (!isnan(i) && !isnan(q) && i != 0)?(double)atan2((double)q, (double)i) * M_PI_DEGREES / M_PI:0.0;
+    phase = (!isnan(i) && !isnan(q) && i != 0)?atan2((double)q, (double)i) * M_PI_DEGREES / M_PI:NAN;
 }
 
 void ProcessorImpl::procChannelData(const Entry* entry, Pv* pv, Pv* pvN, bool& skipNextPV, bool done)
 {
-    uint32_t     mask, val;
-    signed short iVal, qVal;
-    double       amp, phase, quant1, quant2;
+    uint32_t       mask, val;
+    float          iVal, qVal;
+    double         amp, phase, quant1, quant2;
 
     // Keep track of bit boundaries
     static unsigned bitSum = 0;
@@ -289,18 +289,27 @@ void ProcessorImpl::procChannelData(const Entry* entry, Pv* pv, Pv* pvN, bool& s
       case llrfPhase:
         // Perform checks to ensure type validity
         llrfPerformChecks(const_cast<Bsa::Pv*>(pv),const_cast<Bsa::Pv*>(pvN),bitSum);
-        // Read all 32 bits
-        val = (uint32_t)entry->channel_data[wordIndex].mean();
-        // Extract lower 16 bits
-        mask = KEEP_LSB_16; 
-        iVal = static_cast<signed short>(val & mask);
-        // Extract upper 16 bits
-        qVal = static_cast<signed short>((val >> BLOCK_WIDTH_16) & mask);  
-        // Compute phase & amplitude
-        llrfCalcPhaseAmp(iVal, qVal, amp, phase);
-        // Append computed values to PVs
-        quant1 = (*type == llrfAmp)?amp:phase;
-        quant2 = (quant1 == amp   )?phase:amp;
+        // Get data and extract I/Q 
+        if (!isnan(entry->channel_data[wordIndex].mean()))
+        {
+          // Read all 32 bits
+          val  = (uint32_t)entry->channel_data[wordIndex].mean();
+          // Extract lower 16 bits
+          mask = KEEP_LSB_16; 
+          iVal = static_cast<float>(val & mask);
+          // Extract upper 16 bits
+          qVal = static_cast<float>((val >> BLOCK_WIDTH_16) & mask);  
+          // Compute phase & amplitude
+          llrfCalcPhaseAmp(iVal, qVal, amp, phase);
+          // Append computed values to PVs
+          quant1 = (*type == llrfAmp)?amp:phase;
+          quant2 = (quant1 == amp   )?phase:amp;
+        }
+        else
+        {
+          quant1 = NAN;
+          quant2 = NAN;
+        }
         pv->append  (entry->channel_data[wordIndex].n(), 
                      quant1,
                      entry->channel_data[wordIndex].rms2());
