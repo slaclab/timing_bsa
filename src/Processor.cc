@@ -187,7 +187,7 @@ namespace Bsa {
 
     void  procChannelData      (const Entry*, Pv*, Pv*, bool&, bool);
     void  llrfPerformChecks    (const Bsa::Pv*, const Bsa::Pv*, int);
-    void  llrfCalcPhaseAmp     (float, float, double&, double&);
+    void  llrfCalcPhaseAmp     (signed short, signed short, double&, double&);
   };
 
 };
@@ -248,7 +248,7 @@ void ProcessorImpl::llrfPerformChecks(const Bsa::Pv* pv, const Bsa::Pv* pvN, int
     }
 }
 
-void ProcessorImpl::llrfCalcPhaseAmp(float i, float q, double& amp, double& phase)
+void ProcessorImpl::llrfCalcPhaseAmp(signed short i, signed short q, double& amp, double& phase)
 {
     // Calculate amplitude
     amp = (!isnan(i) && !isnan(q) && (i != 0))?sqrt((double)(i) * (double)(i) + (double)(q) * (double)(q)):NAN;
@@ -259,7 +259,7 @@ void ProcessorImpl::llrfCalcPhaseAmp(float i, float q, double& amp, double& phas
 void ProcessorImpl::procChannelData(const Entry* entry, Pv* pv, Pv* pvN, bool& skipNextPV, bool done)
 {
     uint32_t       mask, val;
-    float          iVal, qVal;
+    signed short   iVal, qVal;
     bool           appendNAN;
     double         amp, phase, quant1, quant2;
 
@@ -308,9 +308,9 @@ void ProcessorImpl::procChannelData(const Entry* entry, Pv* pv, Pv* pvN, bool& s
           val  = (uint32_t)entry->channel_data[wordIndex].mean();
           // Extract lower 16 bits
           mask = KEEP_LSB_16; 
-          iVal = static_cast<float>(val & mask);
+          iVal = static_cast<signed short>(val & mask);
           // Extract upper 16 bits
-          qVal = static_cast<float>((val >> BLOCK_WIDTH_16) & mask);  
+          qVal = static_cast<signed short>((val >> BLOCK_WIDTH_16) & mask);
           // Compute phase & amplitude
           llrfCalcPhaseAmp(iVal, qVal, amp, phase);
           // Append computed values to PVs
