@@ -70,10 +70,10 @@ def parse_rssi(addr,words):
         reqsz = int('0x'+tou32(words,6),16)+1
 
         if not (last_tid and tid == last_tid+1 and maddr == last_addr):
-            # dump the previous chunk
+            # dump the previous transaction
             if start_addr:
                 dump()
-            # start the new chunk
+            # start the new transaction
             start_tid = tid
             start_time = pkt_time
             start_addr = maddr

@@ -36,6 +36,8 @@ void     AmcCarrierBase::initialize()
   //  Setup the standard BSA arrays (32k entries)
   //  Must be a multiple of bsaSize and burstSize(2kB)
   const uint64_t bsaSize = 3ULL<<7;  // one entry
+  _begin.resize(HSTARRAYN);
+  _end  .resize(HSTARRAYN);
   for(unsigned i=0; i<NBSAARRAYS; i++) {
 #ifdef DBUG
     pn = p+(1ULL<<8)*bsaSize;
@@ -44,6 +46,8 @@ void     AmcCarrierBase::initialize()
 #endif
     //    pe = pn - BURSTSIZE;
     pe = pn;
+    _begin[i] = p;
+    _end  [i] = pe;
     IndexRange rng(i);
     _startAddr->setVal(&p   ,1,&rng);
     _endAddr  ->setVal(&pe  ,1,&rng);
@@ -60,6 +64,8 @@ void     AmcCarrierBase::initialize()
     pn = p+FAULTSIZE_L*bsaSize;
     //    pe = pn - BURSTSIZE;
     pe = pn;
+    _begin[i] = p;
+    _end  [i] = pe;
     IndexRange rng(i);
     _startAddr->setVal(&p   ,1,&rng);
     _endAddr  ->setVal(&pe  ,1,&rng);
@@ -198,7 +204,7 @@ Record*  AmcCarrierBase::get       (unsigned array,
   Record& record = _record;
   record.buffer = array;
 
-  uint64_t start=0,end=0;
+  uint64_t start=_begin[array],end;
   unsigned wrap=0;
   {
     uint64_t v;
@@ -208,20 +214,16 @@ Record*  AmcCarrierBase::get       (unsigned array,
     record.time_secs  = v>>32;
     record.time_nsecs = v&0xffffffff;
 
-    _startAddr->getVal(&start,1,&rng);
     if (begin < start)
       begin = start;
     _wrAddr->getVal(&end,1,&rng);
 
-    uint64_t last;
-    _endAddr->getVal(&last,1,&rng);
+    uint64_t last = _end[array];
 
     if (end < start or end > last) {
       syslog(LOG_ERR,"<E> Trap BSA ptr error:  array %u  startAddr 0x%016llx  endAddr 0x%016llx  wrAddr 0x%016llx  begin 0x%016llx.  Resetting",
              array, start, last, end, begin);
-      const_cast<AmcCarrierBase*>(this)->reset(array);
-      record.entries.resize(0);
-      return &record;
+      throw("Trap BSA ptr error");
     }
 
     if (begin > last)
@@ -232,9 +234,14 @@ Record*  AmcCarrierBase::get       (unsigned array,
       uint64_t nb      = last-begin+end-start;
       unsigned entries = nb/sizeof(Entry);
 
-      if(!wrap) syslog(LOG_ERR, "<E> AmccCarrierBsae::get (Warp flag issue) reading %u entries (array (%u), begin 0x%016llx, end 0x%016llx)", entries, array, begin, end);
-      if (entries > FAULTSIZE) {
+      if(!wrap) {
+        syslog(LOG_ERR, "<E> AmccCarrierBsae::get (Warp flag issue) reading %u entries (array (%u), begin 0x%016llx, end 0x%016llx)", entries, array, begin, end);
+        throw("Wrap flag issue");
+      }
+      if ((array <  HSTARRAY0 && entries > FAULTSIZE) ||
+          (array >= HSTARRAYN && entries > FAULTSIZE)) {
         syslog(LOG_ERR,"<E> AmcCarrierBase::get reading %u entries with wrap",entries);
+        throw("Entries > MAXSIZE");
       }
       end += sizeof(Entry)*entries - nb;
       record.entries.resize( entries );
@@ -247,9 +254,11 @@ Record*  AmcCarrierBase::get       (unsigned array,
     }
     else {
       unsigned entries = (end -begin)/sizeof(Entry);
-      if (entries > FAULTSIZE) {
+      if ((array <  HSTARRAY0 && entries > FAULTSIZE) ||
+          (array >= HSTARRAYN && entries > FAULTSIZE)) {
         syslog(LOG_ERR,"<E> AmcCarrierBase::get reading %u entries (array (%u), begin 0x%016llx, end 0x%016llx)",
                entries, array, begin, end);
+        throw("Entries > MAXSIZE");
       }
       if (entries) {
         end = begin+entries*sizeof(Entry);

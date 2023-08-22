@@ -30,16 +30,24 @@ namespace Bsa {
     static void     set_nReadout(unsigned v) {_nReadout=v;} 
     static unsigned get_nReadout() { return _nReadout;}
   public:
-    Reader() : _timestamp(0), _next(0), _last(0), _end(0), _preset(0), _record(MAXREADOUT) {}
+    Reader() : _timestamp(0), _next(0), _last(0), _end(0), _preset(0), 
+               _abort(false), _record(MAXREADOUT) {}
     ~Reader() {}
   public:
+    void     abort() { _abort = true; }
     bool     done () const { return _next==_last; }
     void     preset (const ArrayState&    state) { _preset = state.wrAddr; }
     bool     reset(PvArray&              array, 
                    const ArrayState&     state,
-                   AmcCarrierBase&       hw, 
+                   AmcCarrierBase&       hw,
                    uint64_t              timestamp)
     {
+      if (_abort) {
+        _next = _last = state.wrAddr;
+        _abort = false;
+        return false;
+      }
+
       //  Check if wrAddr pointer has moved.  If so, the acquisition isn't done
       if (state.wrAddr != _preset) {
         syslog(LOG_WARNING,"<W> %s:  %s:%-4d [reset]: not ready 0x%016llx  wrAddr 0x%016llx",
@@ -47,19 +55,12 @@ namespace Bsa {
         return false;
       }
 
-      unsigned iarray = array.array();
-      IndexRange rng(iarray);
-      uint64_t start,end;
-      hw._startAddr->getVal(&start,1,&rng);
-      hw._endAddr  ->getVal(&end  ,1,&rng);
-
       _timestamp = state.timestamp;
       //  If wrap is set, the buffer is complete from wrAddr -> end; start -> wrAddr
       //  Else, if the buffer was read before, continue from where we ended
       //  Else read from the start
-      _next = state.wrap ? state.wrAddr : (_last ? _last : start);
+      _next = state.wrap ? state.wrAddr : (_last ? _last : _start);
       _last = state.wrAddr;
-      _end  = end;
 
       //  Check if wrAddr is properly aligned to the record size.
       unsigned n0 = _last / sizeof(Entry);
@@ -73,12 +74,19 @@ namespace Bsa {
 
       uint64_t hw_done = hw.done();
       syslog(LOG_DEBUG,"<D> %s:  %s:%-4d []  array %u  _timestamp 0x%016llx  _next 0x%016llx  _last 0x%016llx  __end 0x%016llx  done 0x%016llx",
-             timestr(),__FILE__,__LINE__,iarray,_timestamp,_next,_last,_end,hw_done);
+             timestr(),__FILE__,__LINE__,array.array(),_timestamp,_next,_last,_end,hw_done);
 
       return true;
     }
+
     Record* next(PvArray& array, AmcCarrierBase& hw)
     {
+      if (_abort) {
+        _next = _last;
+        _record.entries.resize(0);
+        return &_record;
+      }
+
       unsigned n = _nReadout;
       //  _next : start of current read
       //  _last : end of final read
@@ -113,6 +121,7 @@ namespace Bsa {
 
       if (n > MAXREADOUT) {
         syslog(LOG_ERR,"<E> Reader::next allocating record with %u entries", n);
+        throw(std::string("Too many entries"));
       }
 
       Record& record = _record;
@@ -146,11 +155,14 @@ namespace Bsa {
       return &record;
     }
   private:
+    AmcCarrierBase* _hw;
+    uint64_t _start;
+    uint64_t _end;
     uint64_t _timestamp;
     uint64_t _next;
     uint64_t _last;
-    uint64_t _end;
     uint64_t _preset;
+    bool     _abort;
     Record   _record;
   };
 
@@ -170,6 +182,7 @@ namespace Bsa {
   public:
     uint64_t pending();
     int      update(PvArray&);
+    void     abort (PvArray&);
     AmcCarrierBase *getHardware();
   private:
     AmcCarrierBase&      _hw;
@@ -215,91 +228,133 @@ int ProcessorImpl::update(PvArray& array)
 
   Record* record;
 
-  if (array.array() < HSTARRAY0) {
-    if (current != _state[iarray]) {
-      current.nacq = _state[iarray].nacq;
-      if (current.clear) {
-        //
-        //  New acquisition;  start from the beginning of the circular buffer
-        //
-        _hw.ackClear(iarray);
+  try {
 
-        if(_debug) {
-          printf("NEW TS [%u] [%u.%09u -> %u.%09u]\n",
-                 iarray,
+    if (array.array() < HSTARRAY0) {
+      if (current != _state[iarray]) {
+        current.nacq = _state[iarray].nacq;
+        if (current.clear) {
+          //
+          //  New acquisition;  start from the beginning of the circular buffer
+          //
+          _hw.ackClear(iarray);
+
+          syslog(LOG_DEBUG,"<D> %s:  %s:%-4d [current %d]: NEW TS [%u.%09u -> %u.%09u]  wrAddr %016llx\n",
+                 timestr(),__FILE__,__LINE__,iarray,
                  _state[iarray].timestamp>>32,
                  _state[iarray].timestamp&0xffffffff,
                  current.timestamp>>32,
-                 current.timestamp&0xffffffff);
-        }
-        array.reset(current.timestamp>>32,
-                    current.timestamp&0xffffffff);
-        current.nacq = 0; 
-        record = _hw.getRecord(iarray,&current.next);
-      }
-      else {
-        //
-        //  Incremental update
-        //
-        array.set(current.timestamp>>32,
-                  current.timestamp&0xffffffff);
-        record = _hw.get(iarray,_state[iarray].next,&current.next);
-      }
+                 current.timestamp&0xffffffff,
+                 current.wrAddr);
 
-    }
-  }
-  else {  // >= HSTARRAY0
-
-    syslog(LOG_DEBUG,"<D> %s:  %s:%-4d [current %d]: wrAddr %016llx  next %016llx  clear %u  wrap %u  nacq %u",
-           timestr(),__FILE__,__LINE__,iarray,current.wrAddr,current.next,current.clear,current.wrap,current.nacq);
-
-    unsigned ifltb = array.array()-HSTARRAY0;
-    Reader& reader = _reader[ifltb];
-    if (_readerQueue.empty()) {
-      reader.preset(current);  // prepare check for erroneous hw.done signal
-      _readerQueue.push(ifltb);
-      record = &_emptyRecord;
-    }
-    else if (_readerQueue.front()==ifltb) {
-      if (reader.done()) {
-        //  A new fault was latched
-        current.nacq = 0;
-        if (reader.reset(array,current,_hw,current.timestamp-(1ULL<<32))) {
-          record = reader.next(array,_hw);
+          array.reset(current.timestamp>>32,
+                      current.timestamp&0xffffffff);
+          current.nacq = 0; 
+          record = _hw.getRecord(iarray,&current.next);  // read from beginning
         }
         else {
-          // We got the wrong done signal.  Find the correct one and queue it.
-          _hw.reset(iarray);
-          _readerQueue.pop();
-          return 0;  // don't try to correct anything, just skip
+          //
+          //  Incremental update
+          //
+          array.set(current.timestamp>>32,
+                    current.timestamp&0xffffffff);
+          record = _hw.get(iarray,_state[iarray].next,&current.next);
         }
-      }
-      else {
-        //  A previous fault readout is in progress
-        record = reader.next(array,_hw);
-      }
 
-      if (reader.done())
-        _readerQueue.pop();
+      }
     }
-    else {  // Some other fault buffer readout is in progress
-      record = &_emptyRecord;
+    else {  // >= HSTARRAY0
+
+      syslog(LOG_DEBUG,"<D> %s:  %s:%-4d [current %d]: wrAddr %016llx  next %016llx  clear %u  wrap %u  nacq %u",
+             timestr(),__FILE__,__LINE__,iarray,current.wrAddr,current.next,current.clear,current.wrap,current.nacq);
+
+      unsigned ifltb = array.array()-HSTARRAY0;
+      Reader& reader = _reader[ifltb];
+      if (_readerQueue.empty()) {
+        reader.preset(current);  // prepare check for erroneous hw.done signal
+        _readerQueue.push(ifltb);
+        record = &_emptyRecord;
+      }
+      else if (_readerQueue.front()==ifltb) {
+        if (reader.done()) {
+          //  A new fault was latched
+          current.nacq = 0;
+          if (reader.reset(array,current,_hw,current.timestamp-(1ULL<<32))) {
+            record = reader.next(array,_hw);
+          }
+          else {
+            // We got the wrong done signal.  Find the correct one and queue it.
+            _hw.reset(iarray);
+            _readerQueue.pop();
+            return 0;  // don't try to correct anything, just skip
+          }
+        }
+        else {
+          //  A previous fault readout is in progress
+          record = reader.next(array,_hw);
+        }
+
+        if (reader.done())
+          _readerQueue.pop();
+      }
+      else {  // Some other fault buffer readout is in progress
+        record = &_emptyRecord;
+      }
     }
+
+    for(unsigned i=0; i<record->entries.size(); i++) {
+      const Entry& entry = record->entries[i];
+      //  fill pulseid waveform
+      array.append(entry.pulseId());
+      //  fill channel data waveforms
+      for(unsigned j=0; j<pvs.size(); j++)
+        pvs[j]->append(entry.channel_data[j].n(),
+                       entry.channel_data[j].mean(),
+                       entry.channel_data[j].rms2());
+    }
+
+    current.nacq += record->entries.size();
+    _state[iarray] = current;
+
+  }
+  catch(...) {
+    // Something bad happened.  Abort this acquisition.
+    abort(array);
+    return 0;
   }
 
-  for(unsigned i=0; i<record->entries.size(); i++) {
-    const Entry& entry = record->entries[i];
-    //  fill pulseid waveform
-    array.append(entry.pulseId());
-    //  fill channel data waveforms
-    for(unsigned j=0; j<pvs.size(); j++)
-      pvs[j]->append(entry.channel_data[j].n(),
-                     entry.channel_data[j].mean(),
-                     entry.channel_data[j].rms2());
-  }
-  current.nacq += record->entries.size();
-  _state[iarray] = current;
   return current.nacq;
+}
+
+//
+//  Clear the state of this acquisition so it doesn't retry later.
+//
+void ProcessorImpl::abort(PvArray& array)
+{
+  int iarray = array.array();
+
+  syslog(LOG_WARNING,"<D> %s:  %s:%-4d [current %d]: aborting",
+         timestr(),__FILE__,__LINE__,iarray);
+  
+  ArrayState current(_hw.state(iarray));
+  array.reset(current.timestamp>>32,
+              current.timestamp&0xffffffff);
+
+  if (iarray < HSTARRAY0) {
+    _state[iarray] = current;
+  }
+  else {
+    unsigned ifltb = iarray-HSTARRAY0;
+    Reader& reader = _reader[ifltb];
+    if (!_readerQueue.empty() &&
+        _readerQueue.front()==ifltb) {
+      Reader& reader = _reader[ifltb];
+      reader.abort();
+    }
+    else {
+      // nothing to clear
+    }
+  }
 }
 
 Processor* Processor::create(Path reg,
