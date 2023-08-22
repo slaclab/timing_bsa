@@ -1,3 +1,5 @@
+R2.6.0       08/22/2023 Michael Skoufis 
+             - Updates to support LLRF BSA
 
 R2.5.0       04/10/2023 Kukhee Kim
              - fix wraparound flag issue
