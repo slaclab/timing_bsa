@@ -1,4 +1,7 @@
 
+R2.5.0-1.0   08/23/2023 Michael Skoufis
+             - Integrate LLRF BSA updates
+
 R2.5.0       04/10/2023 Kukhee Kim
              - fix wraparound flag issue
                ignore firmware wraparound flag, and software decide to handle the wraparound condition
