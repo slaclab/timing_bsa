@@ -91,6 +91,8 @@ for line in stdin:
         break
     sline = line.strip()
     fields = sline.split(':')
+#    print(f'[{len(fields)}] [{sline}]')
+    
     if len(fields)>2:
         pkt_time = sline.split(' ')[0]
         continue
@@ -98,7 +100,7 @@ for line in stdin:
         addr, body = sline.split(':')[:2]
         words = body.strip().split(' ')
         parse_rssi(addr,words)
-    else:
+    elif 'listen'!=fields[0][:6]:
         dump()
         exit()
 
