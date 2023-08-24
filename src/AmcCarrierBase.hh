@@ -76,6 +76,7 @@ namespace Bsa {
     uint64_t   _memEnd;
 
     friend class Reader;
+    friend class ProcessorImpl;
   };
 };
 

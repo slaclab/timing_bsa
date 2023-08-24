@@ -182,13 +182,13 @@ const std::vector<ArrayState>& AmcCarrierBase::state()
 Record*  AmcCarrierBase::getRecord (unsigned  array) const
 {  
   uint64_t next;
-  return get(array,0,&next);
+  return get(array,_begin[array],&next);
 }
 
 Record*  AmcCarrierBase::getRecord (unsigned  array,
                                     uint64_t* next ) const
 {
-  return get(array,0,next);
+  return get(array,_begin[array],next);
 }
 
 Record*  AmcCarrierBase::getRecord (unsigned array,

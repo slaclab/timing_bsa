@@ -176,7 +176,7 @@ namespace Bsa {
     {
       if (lInit) _hw.initialize();
       for(unsigned i=0; i<HSTARRAYN; i++)
-	_state[i].next = _hw.state(i).wrAddr;
+	_state[i].next = _hw._begin[i];
     }
     ProcessorImpl(const char* ip,
 		  bool lInit,
@@ -184,7 +184,7 @@ namespace Bsa {
     {
       if (lInit) _hw.initialize();
       for(unsigned i=0; i<HSTARRAYN; i++)
-	_state[i].next = _hw.state(i).wrAddr;
+	_state[i].next = _hw._begin[i];
     }
     ProcessorImpl() : _hw(*AmcCarrier::instance()), _debug(false)
     {}
