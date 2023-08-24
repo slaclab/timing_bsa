@@ -59,6 +59,9 @@ namespace Bsa {
       //  If wrap is set, the buffer is complete from wrAddr -> end; start -> wrAddr
       //  Else, if the buffer was read before, continue from where we ended
       //  Else read from the start
+      unsigned iarray = array.array();
+      _start = hw._begin[iarray];
+      _end   = hw._end  [iarray];
       _next = state.wrap ? state.wrAddr : (_last ? _last : _start);
       _last = state.wrAddr;
 
@@ -115,8 +118,7 @@ namespace Bsa {
         //  read _next:_end
         next = _end;
         n = (next - _next) / sizeof(Entry);
-        IndexRange rng(array.array());
-        hw._startAddr->getVal(&nnext,1,&rng);
+        nnext = _start;
       }
 
       if (n > MAXREADOUT) {
@@ -183,9 +185,9 @@ namespace Bsa {
   public:
     uint64_t pending();
     int      update(PvArray&);
-    void     abort (PvArray&);
     AmcCarrierBase *getHardware();
   private:
+    void     abort (PvArray&);
     AmcCarrierBase&      _hw;
     ArrayState           _state [HSTARRAYN];
     Reader               _reader[HSTARRAYN-HSTARRAY0];
@@ -320,6 +322,8 @@ int ProcessorImpl::update(PvArray& array)
   }
   catch(...) {
     // Something bad happened.  Abort this acquisition.
+    syslog(LOG_ERR,"<E> %s:  %s:%-4d [current %d]: caught exception. abort",
+           timestr(),__FILE__,__LINE__,iarray);
     abort(array);
     return 0;
   }
@@ -332,9 +336,12 @@ int ProcessorImpl::update(PvArray& array)
 //
 void ProcessorImpl::abort(PvArray& array)
 {
+  syslog(LOG_WARNING,"<W> %s:  %s:%-4d abort",
+         timestr(),__FILE__,__LINE__);
+
   int iarray = array.array();
 
-  syslog(LOG_WARNING,"<D> %s:  %s:%-4d [current %d]: aborting",
+  syslog(LOG_WARNING,"<W> %s:  %s:%-4d [current %d]: aborting",
          timestr(),__FILE__,__LINE__,iarray);
   
   ArrayState current(_hw.state(iarray));

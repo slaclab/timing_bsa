@@ -107,7 +107,7 @@ namespace Bsa {
     //
     //  Abort an acquisition readout
     //
-    virtual void abort(PvArray&) = 0;
+    //    virtual void abort(PvArray&) = 0;
     //
     //  
     //
