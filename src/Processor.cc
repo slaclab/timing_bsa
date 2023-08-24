@@ -170,12 +170,13 @@ namespace Bsa {
   public:
     ProcessorImpl(Path reg,
                   Path ram,
-                  bool lInit) : _hw(*new AmcCarrierYaml(reg,ram)), _debug(false)
-    { if (lInit) _hw.initialize(); }
-    ProcessorImpl(const char* ip,
                   bool lInit,
-                  bool lDebug) : _hw(*new AmcCarrier(ip)), _debug(lDebug)
-    { if (lInit) _hw.initialize(); }
+                  bool lDebug=false) : _hw(*new AmcCarrier(ip)), _debug(lDebug)
+    {
+      if (lInit) _hw.initialize();
+      for(unsigned i=0; i<HSTARRAYN; i++)
+        hw._startAddr->getVal(&_state[i].next,1,&rng);
+    }
     ProcessorImpl() : _hw(*AmcCarrier::instance()), _debug(false)
     {}
     ~ProcessorImpl();
