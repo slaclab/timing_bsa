@@ -50,7 +50,7 @@ namespace Bsa {
 
       //  Check if wrAddr pointer has moved.  If so, the acquisition isn't done
       if (state.wrAddr != _preset) {
-        syslog(LOG_WARNING,"<W> %s:  %s:%-4d [reset]: not ready 0x%016llx  wrAddr 0x%016llx",
+        syslog(LOG_WARNING,"<W> %s:  %s:%-4d [reset]: not ready 0x%09llx  wrAddr 0x%09llx",
                timestr(),__FILE__,__LINE__,_preset,state.wrAddr);
         return false;
       }
@@ -68,7 +68,7 @@ namespace Bsa {
       //  Check if wrAddr is properly aligned to the record size.
       unsigned n0 = _last / sizeof(Entry);
       if (n0*sizeof(Entry) != _last) {
-        syslog(LOG_WARNING,"<W> %s:  %s:%-4d [reset] misaligned _last 0x%016llx",
+        syslog(LOG_WARNING,"<W> %s:  %s:%-4d [reset] misaligned _last 0x%09llx",
                timestr(),__FILE__,__LINE__,_last);
         return false;
       }
@@ -76,7 +76,7 @@ namespace Bsa {
       array.reset(timestamp>>32,timestamp&0xffffffff);
 
       uint64_t hw_done = hw.done();
-      syslog(LOG_DEBUG,"<D> %s:  %s:%-4d []  array %u  _timestamp 0x%016llx  _next 0x%016llx  _last 0x%016llx  __end 0x%016llx  done 0x%016llx",
+      syslog(LOG_DEBUG,"<D> %s:  %s:%-4d []  array %u  _timestamp 0x%016llx  _next 0x%09llx  _last 0x%09llx  __end 0x%09llx  done 0x%09llx",
              timestr(),__FILE__,__LINE__,array.array(),_timestamp,_next,_last,_end,hw_done);
 
       return true;
@@ -135,13 +135,13 @@ namespace Bsa {
       unsigned n0 = _next / sizeof(Entry);
       if (n0*sizeof(Entry) != _next) {
         const Entry& e = record.entries[0];
-        syslog(LOG_ERR,"<E> %s  %s:%-4d [Misaligned record]  _next 0x%016llx  nch %u  pid 0x%016llx",
+        syslog(LOG_ERR,"<E> %s  %s:%-4d [Misaligned record]  _next 0x%09llx  nch %u  pid 0x%09llx",
                timestr(),__FILE__,__LINE__,_next,e.nchannels(),e.pulseId());
       }
       
       //  _last or _end dont occur at an Entry boundary
       if (_next + n*sizeof(Entry) != next) {
-        syslog(LOG_ERR,"<E> %s:  %s:%-4d [Truncated record]  _next 0x%016llx  next 0x%016llx  _last 0x%016llx  _end 0x%016llx  _next+n 0x%016llx  n %u",
+        syslog(LOG_ERR,"<E> %s:  %s:%-4d [Truncated record]  _next 0x%09llx  next 0x%09llx  _last 0x%09llx  _end 0x%09llx  _next+n 0x%09llx  n %u",
                timestr(),__FILE__,__LINE__,_next,next,_last,_end,_next+n*sizeof(Entry),n);
       }
 
@@ -151,7 +151,7 @@ namespace Bsa {
         hw   .reset(array.array());
         array.set(_timestamp>>32, _timestamp&0xffffffff);
         uint64_t hw_done = hw.done();
-        syslog(LOG_DEBUG,"<D> %s:%-4d [done]:  array %u  hw.done 0x%016llx",__FILE__,__LINE__,array.array(),hw_done);
+        syslog(LOG_DEBUG,"<D> %s:%-4d [done]:  array %u  hw.done 0x%09llx",__FILE__,__LINE__,array.array(),hw_done);
       }
 
       return &record;
@@ -172,22 +172,28 @@ namespace Bsa {
   public:
     ProcessorImpl(Path reg,
                   Path ram,
-                  bool lInit) : _hw(*new AmcCarrierYaml(reg,ram)), _debug(false)
+                  bool lInit) : _hw(*new AmcCarrierYaml(reg,ram))
     {
       if (lInit) _hw.initialize();
-      for(unsigned i=0; i<HSTARRAYN; i++)
+      for(unsigned i=0; i<HSTARRAYN; i++) {
 	_state[i].next = _hw._begin[i];
+	syslog(LOG_DEBUG,"<D> %s:  %s:%-4d [ProcessorImpl] next[%u] 0x%09llx",
+	       timestr(),__FILE__,__LINE__, i,_state[i].next);
+      }
     }
     ProcessorImpl(const char* ip,
 		  bool lInit,
-		  bool lDebug) : _hw(*new AmcCarrier(ip)), _debug(lDebug)
+		  bool lDebug) : _hw(*new AmcCarrier(ip))
     {
       if (lInit) _hw.initialize();
       for(unsigned i=0; i<HSTARRAYN; i++)
 	_state[i].next = _hw._begin[i];
     }
-    ProcessorImpl() : _hw(*AmcCarrier::instance()), _debug(false)
-    {}
+    ProcessorImpl() : _hw(*AmcCarrier::instance())
+    {
+      syslog(LOG_WARNING,"<W> %s:  %s:%-4d [ProcessorImpl]",
+	     timestr(),__FILE__,__LINE__);
+    }
     ~ProcessorImpl();
   public:
     uint64_t pending();
@@ -199,7 +205,6 @@ namespace Bsa {
     ArrayState           _state [HSTARRAYN];
     Reader               _reader[HSTARRAYN-HSTARRAY0];
     std::queue<unsigned> _readerQueue;
-    bool                 _debug;
     Record               _emptyRecord;
   };
 
@@ -240,6 +245,9 @@ int ProcessorImpl::update(PvArray& array)
 
   try {
 
+    // syslog(LOG_DEBUG,"<W> %s:  %s:%-4d []: array %u  next 0x%09llx",
+    // 	   timestr(),__FILE__,__LINE__,iarray,_state[iarray].next);
+
     if (array.array() < HSTARRAY0) {
       if (current != _state[iarray]) {
         current.nacq = _state[iarray].nacq;
@@ -249,7 +257,7 @@ int ProcessorImpl::update(PvArray& array)
           //
           _hw.ackClear(iarray);
 
-          syslog(LOG_DEBUG,"<D> %s:  %s:%-4d [current %d]: NEW TS [%u.%09u -> %u.%09u]  wrAddr %016llx\n",
+          syslog(LOG_DEBUG,"<D> %s:  %s:%-4d [current %d]: NEW TS [%u.%09u -> %u.%09u]  wrAddr %09llx\n",
                  timestr(),__FILE__,__LINE__,iarray,
                  _state[iarray].timestamp>>32,
                  _state[iarray].timestamp&0xffffffff,
@@ -275,7 +283,7 @@ int ProcessorImpl::update(PvArray& array)
     }
     else {  // >= HSTARRAY0
 
-      syslog(LOG_DEBUG,"<D> %s:  %s:%-4d [current %d]: wrAddr %016llx  next %016llx  clear %u  wrap %u  nacq %u",
+      syslog(LOG_DEBUG,"<D> %s:  %s:%-4d [current %d]: wrAddr %09llx  next %09llx  clear %u  wrap %u  nacq %u",
              timestr(),__FILE__,__LINE__,iarray,current.wrAddr,current.next,current.clear,current.wrap,current.nacq);
 
       unsigned ifltb = array.array()-HSTARRAY0;
@@ -312,6 +320,9 @@ int ProcessorImpl::update(PvArray& array)
       }
     }
 
+    // syslog(LOG_DEBUG,"<W> %s:  %s:%-4d []: array %u  entries %u",
+    // 	   timestr(),__FILE__,__LINE__,iarray,record->entries.size());
+
     for(unsigned i=0; i<record->entries.size(); i++) {
       const Entry& entry = record->entries[i];
       //  fill pulseid waveform
@@ -325,12 +336,11 @@ int ProcessorImpl::update(PvArray& array)
 
     current.nacq += record->entries.size();
     _state[iarray] = current;
-
   }
   catch(...) {
     // Something bad happened.  Abort this acquisition.
-    syslog(LOG_ERR,"<E> %s:  %s:%-4d [current %d]: caught exception. abort",
-           timestr(),__FILE__,__LINE__,iarray);
+    syslog(LOG_ERR,"<E> %s:  %s:%-4d [current %d]: caught exception. abort. next 0x%09llx  wrAddr 0x%09llx  ts 0x%016llx",
+           timestr(),__FILE__,__LINE__,iarray,_state[iarray].next,_state[iarray].wrAddr,_state[iarray].timestamp);
     abort(array);
     return 0;
   }
@@ -343,20 +353,13 @@ int ProcessorImpl::update(PvArray& array)
 //
 void ProcessorImpl::abort(PvArray& array)
 {
-  syslog(LOG_WARNING,"<W> %s:  %s:%-4d abort",
-         timestr(),__FILE__,__LINE__);
-
   int iarray = array.array();
-
-  syslog(LOG_WARNING,"<W> %s:  %s:%-4d [current %d]: aborting",
-         timestr(),__FILE__,__LINE__,iarray);
   
   ArrayState current(_hw.state(iarray));
   array.reset(current.timestamp>>32,
               current.timestamp&0xffffffff);
 
   if (iarray < HSTARRAY0) {
-    _state[iarray] = current;
   }
   else {
     unsigned ifltb = iarray-HSTARRAY0;
@@ -370,6 +373,10 @@ void ProcessorImpl::abort(PvArray& array)
       // nothing to clear
     }
   }
+
+  //  Still a firmware bug that allows WrAddr to go out of bounds.  Let's reset upon detection.
+  _hw.reset(iarray);
+  _state[iarray].next = _hw._begin[iarray];
 }
 
 Processor* Processor::create(Path reg,

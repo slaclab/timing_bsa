@@ -67,7 +67,7 @@ void     AmcCarrierBase::initialize()
     _sMode    ->setVal(&uzro,1,&rng);
     _sInit    ->setVal(&uone,1,&rng);
     _sInit    ->setVal(&uzro,1,&rng);
-    syslog(LOG_DEBUG,"<D>  array %u  startAddr 0x%016llx  endAddr 0x%016llx",
+    syslog(LOG_DEBUG,"<D>  array %u  startAddr 0x%09llx  endAddr 0x%09llx",
            i, p, pe);
     p = pn;
   }
@@ -85,7 +85,7 @@ void     AmcCarrierBase::initialize()
     _sMode    ->setVal(&uzro,1,&rng);
     _sInit    ->setVal(&uone,1,&rng);
     _sInit    ->setVal(&uzro,1,&rng);
-    syslog(LOG_DEBUG,"<D>  array %u  startAddr 0x%016llx  endAddr 0x%016llx",
+    syslog(LOG_DEBUG,"<D>  array %u  startAddr 0x%09llx  endAddr 0x%09llx",
            i, p, pe);
     p = pn;
   }
@@ -229,7 +229,7 @@ Record*  AmcCarrierBase::get       (unsigned array,
     record.time_nsecs = v&0xffffffff;
 
     if (begin < start || begin > last) { // This is an error
-      syslog(LOG_ERR,"<E> %s  %s:%-4d [Begin out of bounds]  begin 0x%016llx  startAddr 0x%016llx  endAddr 0x%016llx",
+      syslog(LOG_ERR,"<E> %s  %s:%-4d [Begin out of bounds]  begin 0x%09llx  startAddr 0x%09llx  endAddr 0x%09llx",
              timestr(),__FILE__,__LINE__,begin,start,last);
       throw("fetch begin out of bounds");
     }
@@ -237,7 +237,7 @@ Record*  AmcCarrierBase::get       (unsigned array,
     _wrAddr->getVal(&end,1,&rng);
 
     if (end < start or end > last) {
-      syslog(LOG_ERR,"<E> %s  %s:%-4d [End out of bounds]  wrAddr 0x%016llx  startAddr 0x%016llx  endAddr 0x%016llx",
+      syslog(LOG_ERR,"<E> %s  %s:%-4d [End out of bounds]  wrAddr 0x%09llx  startAddr 0x%09llx  endAddr 0x%09llx",
              timestr(),__FILE__,__LINE__,end,start,last);
       throw("fetch end out of bounds");
     }
@@ -245,7 +245,7 @@ Record*  AmcCarrierBase::get       (unsigned array,
     _sFull->getVal(&wrap     ,1,&rng);
 
     if (end == begin && end == start && !wrap) {  // Trap a common error
-      syslog(LOG_ERR,"<E> %s  %s:%-4d [No data to read]  wrAddr 0x%016llx",
+      syslog(LOG_ERR,"<E> %s  %s:%-4d [No data to read]  wrAddr 0x%09llx",
              timestr(),__FILE__,__LINE__,end);
       throw("fetch no data to read");
     }
@@ -255,13 +255,13 @@ Record*  AmcCarrierBase::get       (unsigned array,
       unsigned entries = nb/sizeof(Entry);
 
       if(!wrap) {
-        syslog(LOG_ERR,"<E> %s  %s:%-4d [Wrap flag issue] reading %u entries (array (%u), begin 0x%016llx, end 0x%016llx)",
+        syslog(LOG_ERR,"<E> %s  %s:%-4d [Wrap flag issue] reading %u entries (array (%u), begin 0x%09llx, end 0x%09llx)",
                timestr(),__FILE__,__LINE__, entries, array, begin, end);
         throw("Wrap flag issue");
       }
       if ((array <  HSTARRAY0 && entries > BSASIZE_U) ||
           (array >= HSTARRAYN && entries > FAULTSIZE)) {
-        syslog(LOG_ERR,"<E> %s  %s:%-4d [oversize] reading %u entries (array (%u), begin 0x%016llx, end 0x%016llx)",
+        syslog(LOG_ERR,"<E> %s  %s:%-4d [oversize] reading %u entries (array (%u), begin 0x%09llx, end 0x%09llx)",
                timestr(),__FILE__,__LINE__, entries, array, begin, end);
         throw("Entries > MAXSIZE");
       }
@@ -278,7 +278,7 @@ Record*  AmcCarrierBase::get       (unsigned array,
       unsigned entries = (end -begin)/sizeof(Entry);
       if ((array <  HSTARRAY0 && entries > BSASIZE_U) ||
           (array >= HSTARRAYN && entries > FAULTSIZE)) {
-        syslog(LOG_ERR,"<E> %s  %s:%-4d [oversize] reading %u entries (array (%u), begin 0x%016llx, end 0x%016llx)",
+        syslog(LOG_ERR,"<E> %s  %s:%-4d [oversize] reading %u entries (array (%u), begin 0x%09llx, end 0x%09llx)",
                timestr(),__FILE__,__LINE__, entries, array, begin, end);
         throw("Entries > MAXSIZE");
       }
