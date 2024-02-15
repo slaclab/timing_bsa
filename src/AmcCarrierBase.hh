@@ -50,6 +50,8 @@ namespace Bsa {
                          uint64_t empty, uint64_t error) const;
   protected:
     std::vector<ArrayState> _state;
+    std::vector<uint64_t>   _begin;
+    std::vector<uint64_t>   _end;
     mutable Record          _record;
     Path       _path;
     Path       _bpath;
@@ -74,6 +76,7 @@ namespace Bsa {
     uint64_t   _memEnd;
 
     friend class Reader;
+    friend class ProcessorImpl;
   };
 };
 

@@ -55,4 +55,6 @@ bsapeek_SRCS = bsapeek.cc
 bsapeek_LIBS = bsa $(CPSW_LIBS)
 PROGRAMS     = bsapeek
 
+PROGRAMS     =
+
 include $(CPSW_DIR)/rules.mak

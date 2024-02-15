@@ -138,6 +138,10 @@ namespace Bsa {
     //
     virtual int update(PvArray&) = 0;
     //
+    //  Abort an acquisition readout
+    //
+    //    virtual void abort(PvArray&) = 0;
+    //
     //  
     //
     virtual AmcCarrierBase *getHardware() = 0;

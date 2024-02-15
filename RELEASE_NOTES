@@ -1,5 +1,10 @@
-R2.5.0-1.0   08/22/2023 Michael Skoufis 
+R2.7.0      02/15/2024 Michael Skoufis 
              - Updates to support LLRF BSA
+
+R2.6.0       09/18/2023 Matt Weaver
+             - merge R2.5.0-thow-and-drop branch
+             - Throw exceptions for memory fetch attempts out of range.  Catch and abort BSA readout
+             - Add more traps for pointer errors 
 
 R2.5.0       04/10/2023 Kukhee Kim
              - fix wraparound flag issue

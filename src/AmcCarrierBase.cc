@@ -6,10 +6,26 @@
 
 using namespace Bsa;
 
-static const unsigned FAULTSIZE   = 1<<20;
-static const uint64_t FAULTSIZE_L = 1ULL<<20;
 //#define BURSTSIZE 0x800
 //#define DBUG
+
+#ifdef DBUG
+static const uint64_t BSASIZE_U   = 1<<8;
+static const uint64_t BSASIZE_L   = 1ULL<<8;
+#else
+static const uint64_t BSASIZE_U   = 1<<15;
+static const uint64_t BSASIZE_L   = 1ULL<<15;
+#endif
+static const unsigned FAULTSIZE   = 1<<20;
+static const uint64_t FAULTSIZE_L = 1ULL<<20;
+
+static char* timestr() 
+{
+  time_t t = time(NULL);
+  char* v = asctime(localtime(&t));
+  *strchr(v,'\n')=0; // strip the carriage return
+  return v;
+}
 
 static uint64_t GET_U1(ScalVal_RO s, unsigned nelms)
 {
@@ -36,14 +52,14 @@ void     AmcCarrierBase::initialize()
   //  Setup the standard BSA arrays (32k entries)
   //  Must be a multiple of bsaSize and burstSize(2kB)
   const uint64_t bsaSize = 3ULL<<7;  // one entry
+  _begin.resize(HSTARRAYN);
+  _end  .resize(HSTARRAYN);
   for(unsigned i=0; i<NBSAARRAYS; i++) {
-#ifdef DBUG
-    pn = p+(1ULL<<8)*bsaSize;
-#else
-    pn = p+(1ULL<<15)*bsaSize;
-#endif
+    pn = p+BSASIZE_L*bsaSize;
     //    pe = pn - BURSTSIZE;
     pe = pn;
+    _begin[i] = p;
+    _end  [i] = pe;
     IndexRange rng(i);
     _startAddr->setVal(&p   ,1,&rng);
     _endAddr  ->setVal(&pe  ,1,&rng);
@@ -51,7 +67,7 @@ void     AmcCarrierBase::initialize()
     _sMode    ->setVal(&uzro,1,&rng);
     _sInit    ->setVal(&uone,1,&rng);
     _sInit    ->setVal(&uzro,1,&rng);
-    syslog(LOG_DEBUG,"<D>  array %u  startAddr 0x%016llx  endAddr 0x%016llx",
+    syslog(LOG_DEBUG,"<D>  array %u  startAddr 0x%09llx  endAddr 0x%09llx",
            i, p, pe);
     p = pn;
   }
@@ -60,6 +76,8 @@ void     AmcCarrierBase::initialize()
     pn = p+FAULTSIZE_L*bsaSize;
     //    pe = pn - BURSTSIZE;
     pe = pn;
+    _begin[i] = p;
+    _end  [i] = pe;
     IndexRange rng(i);
     _startAddr->setVal(&p   ,1,&rng);
     _endAddr  ->setVal(&pe  ,1,&rng);
@@ -67,7 +85,7 @@ void     AmcCarrierBase::initialize()
     _sMode    ->setVal(&uzro,1,&rng);
     _sInit    ->setVal(&uone,1,&rng);
     _sInit    ->setVal(&uzro,1,&rng);
-    syslog(LOG_DEBUG,"<D>  array %u  startAddr 0x%016llx  endAddr 0x%016llx",
+    syslog(LOG_DEBUG,"<D>  array %u  startAddr 0x%09llx  endAddr 0x%09llx",
            i, p, pe);
     p = pn;
   }
@@ -164,13 +182,13 @@ const std::vector<ArrayState>& AmcCarrierBase::state()
 Record*  AmcCarrierBase::getRecord (unsigned  array) const
 {  
   uint64_t next;
-  return get(array,0,&next);
+  return get(array,_begin[array],&next);
 }
 
 Record*  AmcCarrierBase::getRecord (unsigned  array,
                                     uint64_t* next ) const
 {
-  return get(array,0,next);
+  return get(array,_begin[array],next);
 }
 
 Record*  AmcCarrierBase::getRecord (unsigned array,
@@ -198,7 +216,9 @@ Record*  AmcCarrierBase::get       (unsigned array,
   Record& record = _record;
   record.buffer = array;
 
-  uint64_t start=0,end=0;
+  uint64_t start=_begin[array];
+  uint64_t last =  _end[array];
+  uint64_t end;
   unsigned wrap=0;
   {
     uint64_t v;
@@ -208,33 +228,42 @@ Record*  AmcCarrierBase::get       (unsigned array,
     record.time_secs  = v>>32;
     record.time_nsecs = v&0xffffffff;
 
-    _startAddr->getVal(&start,1,&rng);
-    if (begin < start)
-      begin = start;
-    _wrAddr->getVal(&end,1,&rng);
-
-    uint64_t last;
-    _endAddr->getVal(&last,1,&rng);
-
-    if (end < start or end > last) {
-      syslog(LOG_ERR,"<E> Trap BSA ptr error:  array %u  startAddr 0x%016llx  endAddr 0x%016llx  wrAddr 0x%016llx  begin 0x%016llx.  Resetting",
-             array, start, last, end, begin);
-      const_cast<AmcCarrierBase*>(this)->reset(array);
-      record.entries.resize(0);
-      return &record;
+    if (begin < start || begin > last) { // This is an error
+      syslog(LOG_ERR,"<E> %s  %s:%-4d [Begin out of bounds]  begin 0x%09llx  startAddr 0x%09llx  endAddr 0x%09llx",
+             timestr(),__FILE__,__LINE__,begin,start,last);
+      throw("fetch begin out of bounds");
     }
 
-    if (begin > last)
-      begin = last;
+    _wrAddr->getVal(&end,1,&rng);
+
+    if (end < start or end > last) {
+      syslog(LOG_ERR,"<E> %s  %s:%-4d [End out of bounds]  wrAddr 0x%09llx  startAddr 0x%09llx  endAddr 0x%09llx",
+             timestr(),__FILE__,__LINE__,end,start,last);
+      throw("fetch end out of bounds");
+    }
 
     _sFull->getVal(&wrap     ,1,&rng);
+
+    if (end == begin && end == start && !wrap) {  // Trap a common error
+      syslog(LOG_ERR,"<E> %s  %s:%-4d [No data to read]  wrAddr 0x%09llx",
+             timestr(),__FILE__,__LINE__,end);
+      throw("fetch no data to read");
+    }
+
     if (end <= begin /*&& wrap*/) {
       uint64_t nb      = last-begin+end-start;
       unsigned entries = nb/sizeof(Entry);
 
-      if(!wrap) syslog(LOG_ERR, "<E> AmccCarrierBsae::get (Warp flag issue) reading %u entries (array (%u), begin 0x%016llx, end 0x%016llx)", entries, array, begin, end);
-      if (entries > FAULTSIZE) {
-        syslog(LOG_ERR,"<E> AmcCarrierBase::get reading %u entries with wrap",entries);
+      if(!wrap) {
+        syslog(LOG_ERR,"<E> %s  %s:%-4d [Wrap flag issue] reading %u entries (array (%u), begin 0x%09llx, end 0x%09llx)",
+               timestr(),__FILE__,__LINE__, entries, array, begin, end);
+        throw("Wrap flag issue");
+      }
+      if ((array <  HSTARRAY0 && entries > BSASIZE_U) ||
+          (array >= HSTARRAYN && entries > FAULTSIZE)) {
+        syslog(LOG_ERR,"<E> %s  %s:%-4d [oversize] reading %u entries (array (%u), begin 0x%09llx, end 0x%09llx)",
+               timestr(),__FILE__,__LINE__, entries, array, begin, end);
+        throw("Entries > MAXSIZE");
       }
       end += sizeof(Entry)*entries - nb;
       record.entries.resize( entries );
@@ -247,9 +276,11 @@ Record*  AmcCarrierBase::get       (unsigned array,
     }
     else {
       unsigned entries = (end -begin)/sizeof(Entry);
-      if (entries > FAULTSIZE) {
-        syslog(LOG_ERR,"<E> AmcCarrierBase::get reading %u entries (array (%u), begin 0x%016llx, end 0x%016llx)",
-               entries, array, begin, end);
+      if ((array <  HSTARRAY0 && entries > BSASIZE_U) ||
+          (array >= HSTARRAYN && entries > FAULTSIZE)) {
+        syslog(LOG_ERR,"<E> %s  %s:%-4d [oversize] reading %u entries (array (%u), begin 0x%09llx, end 0x%09llx)",
+               timestr(),__FILE__,__LINE__, entries, array, begin, end);
+        throw("Entries > MAXSIZE");
       }
       if (entries) {
         end = begin+entries*sizeof(Entry);
