@@ -38,23 +38,22 @@ RateSelect::operator unsigned() const { return _value; }
  
 double   ChannelData::mean() const
 {
-  if (fixed())
+  if (fixed() && n())
     return double(raw());
-  if ((data[0]&(1<<13))==0 && n())
+  if ((data[0]&(1<<13))==0 && (data[0]&(1<<14))==0 && n())
     return double(int32_t(((data[1]&0xffff)<<16) | (data[0]>>16)))/double(n());
   return NAN;
 }
 
 double   ChannelData::rms2() const
 {
-  if (fixed())
-    return 0;
-
   unsigned nv = n();
+  
   if (nv==0) return NAN;
   if (excpt()) return NAN;
-
-  if (nv==1) return 0;
+  
+  if (fixed() || nv==1)
+    return 0;
 
   double var = double((int64_t(data[2])<<16) | (data[1]>>16));
   double sum = double(int32_t(((data[1]&0xffff)<<16) | (data[0]>>16)));
