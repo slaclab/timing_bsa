@@ -14,6 +14,7 @@ R2.5.0       04/10/2023 Kukhee Kim
                ignore firmware wraparound flag, and software decide to handle the wraparound condition
                without the wraparound flag, to resolve bss fault on BPM application and waiting long time until back to normal 
 
+
 R2.4.0       03/14/2023 Kukhee Kim
              - merge R2.2.0-BSSS_BSA_upgrade branch
              - bug fixing for double free issue and data corruption on the fault buffer
@@ -34,6 +35,11 @@ R2.2.0-1.0   03/09/2023  Kukhee Kim
               - debugging fault buffer bug, test workaround
               - fixing firmware bug for the fault buffer and clean up workaround
               - using syslog for the debugging message
+
+R2.2.0-0.3   03/15/2023  Michael Skoufis
+              - Replace Bsa::Pv::append() call in ProcessorImpl::update() with call to Bsa::PvArray::procChannelData().
+              - Move Bsa datatypes from bsaDriver to Processor.hh and add datatype accessor function in Bsa::Pv class. 
+
 
 R2.2.0-0.2   01/13/2023  Kukhee Kim
               - Add throttled reader for fault buffer readout.  Buffer readouts are queued in the order seen by the thread.
