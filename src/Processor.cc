@@ -499,17 +499,6 @@ int ProcessorImpl::update(PvArray& array)
     // syslog(LOG_DEBUG,"<W> %s:  %s:%-4d []: array %u  entries %u",
     // 	   timestr(),__FILE__,__LINE__,iarray,record->entries.size());
 
-    for(unsigned i=0; i<record->entries.size(); i++) {
-      const Entry& entry = record->entries[i];
-      //  fill pulseid waveform
-      array.append(entry.pulseId());
-      //  fill channel data waveforms
-      for(unsigned j=0; j<pvs.size(); j++)
-        pvs[j]->append(entry.channel_data[j].n(),
-                       entry.channel_data[j].mean(),
-                       entry.channel_data[j].rms2());
-    }
-
   unsigned numOfEntries = record->entries.size();
   
   for(unsigned i = 0; i < numOfEntries; i++) 
