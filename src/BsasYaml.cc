@@ -12,16 +12,7 @@
 #include <cpsw_api_builder.h>
 #include <cpsw_mmio_dev.h>
 
-#define CPSW_TRY_CATCH(X)       try {   \
-        (X);                            \
-    } catch (CPSWError &e) {            \
-        fprintf(stderr,                 \
-                "CPSW Error: %s at %s, line %d\n",     \
-                e.getInfo().c_str(),    \
-                __FILE__, __LINE__);    \
-        throw e;                        \
-    }
-
+#include "CpswUtil.hh"
 
 using namespace Bsas;
 
