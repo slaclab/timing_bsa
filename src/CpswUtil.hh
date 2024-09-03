@@ -7,18 +7,20 @@
 // may be copied, modified, propagated, or distributed except according to 
 // the terms contained in the LICENSE.txt file.
 //////////////////////////////////////////////////////////////////////////////
-#include "BsssYaml.hh"
-#include "CpswUtil.hh"
 
-using namespace Bsss;
+#ifndef _CPSWUTIL_BSA_H_
+#define _CPSWUTIL_BSA_H_
 
-BsssYaml::BsssYaml(Path bsss_path, uint32_t num_edef)
-:AcqServiceYaml(bsss_path, num_edef, AcqService::bsss)
-{
-    int i = 0;
-    char str_name[80];
+/** shorthand try/catch helper */
+#define CPSW_TRY_CATCH(X)       try {   \
+        (X);                            \
+    } catch (CPSWError &e) {            \
+        fprintf(stderr,                 \
+                "CPSW Error: %s at %s, line %d\n",     \
+                e.getInfo().c_str(),    \
+                __FILE__, __LINE__);    \
+        throw e;                        \
+    }
 
-    sprintf(str_name, "EdefRateLimit[%d]", i);
-	CPSW_TRY_CATCH(_EdefRateLimit[i] = IScalVal::create(_path->findByName(str_name)));
-}
 
+#endif // _CPSWUTIL_BSA_H_
