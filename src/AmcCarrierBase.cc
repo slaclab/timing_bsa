@@ -327,13 +327,20 @@ void AmcCarrierBase::_fill(void*    dst,
   }
 }
 
-#define PR36(name) {                                                    \
-    uint64_t v;                                                         \
-    ScalVal_RO s = IScalVal_RO::create( path->findByName(#name));        \
-    s->getVal(&v,1,&rng);                                               \
-    printf("%09llx ",(unsigned long long)(v));                          \
-  }
-
+static void printAddr(const Path& path, const char* name, IndexRange& rng) {
+	uint64_t v;
+	try {
+		ScalVal_RO s = IScalVal::create(path->findByName(name));
+		s->getVal(&v, 1, &rng);
+		printf("%09llx ", (unsigned long long)(v));
+	}
+	catch(const CPSWError& e) {
+		printf("%s print failed: %s\n", name, e.getInfo().c_str());
+	}
+	catch(...) {
+		printf("%s print failed: unknown error\n", name);
+	}
+}
 
 void AmcCarrierBase::_printBuffer(Path path, ScalVal_RO ts, unsigned i,
                                   uint64_t done , uint64_t full, 
@@ -341,10 +348,10 @@ void AmcCarrierBase::_printBuffer(Path path, ScalVal_RO ts, unsigned i,
 {
     IndexRange rng(i);
     printf("%4.4x ",i);
-    PR36(StartAddr); 
-    PR36(EndAddr);
-    PR36(WrAddr);
-    PR36(TriggerAddr);
+    printAddr(path, "StartAddr", rng); 
+    printAddr(path, "EndAddr", rng);
+    printAddr(path, "WrAddr", rng);
+    printAddr(path, "TriggerAddr", rng);
     uint64_t tstamp;
     ts->getVal(&tstamp,1,&rng);
     printf("%10.10u.%09u ",unsigned(tstamp>>32),unsigned(tstamp&0xffffffff));
@@ -363,10 +370,10 @@ void AmcCarrierBase::_printBuffer(Path path, unsigned i,
 {
     IndexRange rng(i);
     printf("%4.4x ",i);
-    PR36(StartAddr); 
-    PR36(EndAddr);
-    PR36(WrAddr);
-    PR36(TriggerAddr);
+    printAddr(path, "StartAddr", rng); 
+    printAddr(path, "EndAddr", rng);
+    printAddr(path, "WrAddr", rng);
+    printAddr(path, "TriggerAddr", rng);
     printf("%20.20s ", "-");
 
     printf("%4.4s ", (done &(1ULL<<i)) ? "X": "-");
