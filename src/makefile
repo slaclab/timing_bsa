@@ -7,13 +7,15 @@ LDFLAGS += -Wl,-Bstatic -static-libgcc
 
 ifeq ($(PACKAGE_TOP),)
 ifneq ($(EPICS_PACKAGE_TOP),)
-	PACKAGE_TOP=$(EPICS_PACKAGE_TOP)
+PACKAGE_TOP=$(EPICS_PACKAGE_TOP)
 else
-	$(error PACKAGE_TOP or EPICS_PACKAGE_TOP must be provided in the environment or on the command line)
+$(error PACKAGE_TOP or EPICS_PACKAGE_TOP must be provided in the environment or on the command line)
 endif
 endif
 
-CPSW_DIR=$(PACKAGE_TOP)/cpsw/framework/R4.4.1/src
+CPSW_FRAMEWORK_VERSION=R4.5.2
+
+CPSW_DIR=$(PACKAGE_TOP)/cpsw/framework/$(CPSW_FRAMEWORK_VERSION)/src
 
 # may override CPSW_DIR / DEVICELIB_DIR from release.mak
 # must set SRCDIR (is redefined by recursive make)
