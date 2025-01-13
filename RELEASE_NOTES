@@ -1,3 +1,7 @@
+R2.6.1       01/13/2025 Jeremy Lorelli
+             - Update to CPSW R4.5.2
+             - Improve exception handling to reduce crashes
+
 R2.6.0       09/18/2023 Matt Weaver
              - merge R2.5.0-thow-and-drop branch
              - Throw exceptions for memory fetch attempts out of range.  Catch and abort BSA readout
